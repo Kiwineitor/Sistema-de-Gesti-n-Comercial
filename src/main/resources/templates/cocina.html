@@ -662,6 +662,7 @@
 </head>
 
 <body>
+    <div th:replace="~{fragments/sesion :: barra}"></div>
 
     <div id="loader">
         <div class="ldspin"></div>
@@ -671,7 +672,7 @@
     <nav>
         <div class="nav-logo">🍳 <em>PENSION EKWE IYAWE</em> — Cocina</div>
         <div class="nav-clock" id="nav-clock">--:--:--</div>
-        <a class="nav-lnk" href="/mesero">Vista Mesero</a>
+        <a class="nav-lnk" href="/mesero" th:if="${sesionRol == 'ADMIN'}">Vista Mesero</a>
     </nav>
 
     <div class="sbar">

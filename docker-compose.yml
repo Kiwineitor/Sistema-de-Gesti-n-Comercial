@@ -1,0 +1,57 @@
+name: ekwe-iyawe
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ekwe_iyawe}
+      POSTGRES_USER: ${DB_USER:-ekwe}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ekwe_pass}
+      TZ: America/La_Paz
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${DB_PORT:-5434}:5432"   # acceso opcional desde el host (DBeaver, pgAdmin...)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    image: ekwe-iyawe:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${DB_NAME:-ekwe_iyawe}
+      PGUSER: ${DB_USER:-ekwe}
+      PGPASSWORD: ${DB_PASSWORD:-ekwe_pass}
+      ADMIN_PIN: ${ADMIN_PIN:-1234}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
+      SEED_MESERO_PASSWORD: ${SEED_MESERO_PASSWORD:-mesero123}
+      SEED_COCINA_PASSWORD: ${SEED_COCINA_PASSWORD:-cocina123}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+
+  # Visor web de la base de datos (opcional): docker compose --profile tools up -d
+  adminer:
+    image: adminer:4
+    profiles: ["tools"]
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+
+volumes:
+  pgdata:

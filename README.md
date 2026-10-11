@@ -90,6 +90,41 @@ Los restaurantes pequeños y medianos suelen gestionar sus pedidos de forma manu
 
 ---
 
+## 🐳 Ejecución con Docker (recomendado)
+
+Solo necesitas [Docker Desktop](https://www.docker.com/products/docker-desktop/). La base de datos PostgreSQL corre en su propio contenedor, con los datos en un volumen persistente.
+
+```bash
+cp .env.example .env        # opcional: ajusta puertos y contraseñas
+docker compose up -d --build
+```
+
+Abre **http://localhost:8080** e ingresa con alguno de estos usuarios:
+
+| Usuario | Contraseña | Rol | Qué puede ver |
+|---------|-----------|-----|---------------|
+| `admin`  | `admin123`  | Dueño  | Todas las vistas: Mesero, Cocina y Panel del Menú (sin PIN) |
+| `mesero` | `mesero123` | Mesero | Toma de pedidos, cobros y reportes; el panel del menú requiere el PIN |
+| `cocina` | `cocina123` | Cocina | Solo la pantalla de cocina en tiempo real |
+
+- Los usuarios se crean al primer arranque si no existen. Para cambiar sus contraseñas, define `SEED_*_PASSWORD` en `.env` **antes** del primer arranque.
+- Con `SEED_DEMO_DATA=true` (por defecto en Docker) se carga un menú de ejemplo si la tabla de platos está vacía.
+- El botón 👤 en el borde izquierdo de cada vista muestra el usuario, permite cambiar de vista y cerrar sesión.
+- PIN del panel del dueño: `ADMIN_PIN` (por defecto `1234`).
+
+Comandos útiles:
+
+```bash
+docker compose logs -f app                 # ver logs
+docker compose --profile tools up -d       # visor web de la BD (Adminer) en http://localhost:8081
+docker compose down                        # detener (conserva los datos)
+docker compose down -v                     # detener y BORRAR la base de datos
+```
+
+La BD también es accesible desde el host en `localhost:5434` (usuario `ekwe`, contraseña `ekwe_pass`, base `ekwe_iyawe`).
+
+---
+
 ## 🚀 Instalación y Ejecución Local
 
 ### Prerrequisitos
@@ -115,12 +150,9 @@ CREATE DATABASE ekwe_iyawe;
 
 **3. Configura la conexión a la base de datos**
 
-Edita el archivo `src/main/resources/application.properties`:
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/ekwe_iyawe
-spring.datasource.username=TU_USUARIO
-spring.datasource.password=TU_CONTRASEÑA
-spring.jpa.hibernate.ddl-auto=update
+Por defecto se conecta a `localhost:5432/ekwe_iyawe` con usuario y contraseña `postgres`. Si los tuyos son distintos, define las variables de entorno:
+```bash
+PGHOST=localhost PGPORT=5432 PGDATABASE=ekwe_iyawe PGUSER=TU_USUARIO PGPASSWORD=TU_CONTRASEÑA
 ```
 
 **4. Compila y ejecuta el proyecto**

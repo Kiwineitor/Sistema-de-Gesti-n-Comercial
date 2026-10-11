@@ -1,5 +1,6 @@
 package com.sistema.pedidosCori.config;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -11,13 +12,17 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class AdminInterceptor implements HandlerInterceptor{
-    
+
     public static final String SESSION_KEY = "ADMIN_AUTH";
- 
+
     @Override
     public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler)
             throws Exception {
- 
+
+        // El usuario con rol ADMIN entra directo, sin PIN
+        if (SecurityConfig.esAdmin(SecurityContextHolder.getContext().getAuthentication())) {
+            return true;
+        }
         HttpSession session = req.getSession(false);
         if (session != null && Boolean.TRUE.equals(session.getAttribute(SESSION_KEY))) {
             return true;

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Barra flotante de sesión: usuario, rol, vistas permitidas y cerrar sesión -->
+<div th:fragment="barra" th:if="${sesionUsuario != null}" id="sesion-barra">
+    <style>
+        #sesion-barra { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 9999;
+            font-family: 'Nunito', system-ui, sans-serif; }
+        #sesion-barra .sb-tab { display: flex; align-items: center; justify-content: center; width: 30px; height: 44px;
+            border: none; border-radius: 0 12px 12px 0; background: rgba(20,20,28,.85); color: #F6B846;
+            font-size: 1rem; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+        #sesion-barra .sb-panel { display: none; position: absolute; left: 34px; top: 50%; transform: translateY(-50%);
+            min-width: 180px; padding: 12px; border-radius: 14px; background: #16161d; color: #fff;
+            box-shadow: 0 8px 28px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.08); }
+        #sesion-barra.open .sb-panel { display: block; }
+        #sesion-barra .sb-user { font-weight: 800; font-size: .95rem; }
+        #sesion-barra .sb-rol { font-size: .72rem; letter-spacing: .08em; color: #F6B846; font-weight: 800; margin-bottom: 10px; }
+        #sesion-barra a, #sesion-barra .sb-salir { display: block; width: 100%; box-sizing: border-box; text-align: left;
+            padding: 8px 10px; margin-top: 4px; border-radius: 9px; font: inherit; font-size: .85rem; font-weight: 700;
+            color: #fff; text-decoration: none; background: rgba(255,255,255,.06); border: none; cursor: pointer; }
+        #sesion-barra a:hover { background: rgba(246,184,70,.18); }
+        #sesion-barra .sb-salir { margin-top: 10px; background: rgba(239,68,68,.18); color: #fca5a5; }
+    </style>
+    <button type="button" class="sb-tab" title="Sesión"
+            onclick="document.getElementById('sesion-barra').classList.toggle('open')">👤</button>
+    <div class="sb-panel">
+        <div class="sb-user" th:text="${sesionUsuario}">usuario</div>
+        <div class="sb-rol" th:text="${sesionRol}">ROL</div>
+        <a th:each="v : ${sesionVistas}" th:href="${v.url}" th:text="${v.label}">Vista</a>
+        <form th:action="@{/logout}" method="post" style="margin:0">
+            <button type="submit" class="sb-salir">⏻ Cerrar sesión</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
