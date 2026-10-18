@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="barra(activa)">
+  <a class="admin-skip" href="#contenido">Saltar al contenido</a>
+  <header class="admin-header">
+    <button type="button" class="admin-menu-btn flat" aria-controls="admin-nav" aria-expanded="false" data-admin-abrir>
+      <span class="admin-menu-ico" aria-hidden="true">☰</span>
+      <span>Menú</span>
+    </button>
+    <a class="admin-brand" th:href="@{/admin}" aria-label="Ir al inicio de la administración">
+      <img th:src="${negocio.logoUrl}" alt="" data-negocio-logo>
+      <span class="admin-brand-nombre" th:text="${negocio.nombreNegocio}" data-negocio-texto="nombreNegocio">Gestión Comercial</span>
+    </a>
+    <span class="admin-header-titulo" id="admin-seccion-actual"></span>
+    <div class="admin-header-sesion">
+      <div th:replace="~{fragments/sesion :: barra}"></div>
+    </div>
+  </header>
+  <div class="admin-nav-fondo" data-admin-cerrar hidden></div>
+  <nav class="admin-nav" id="admin-nav" aria-label="Administración">
+    <div class="admin-nav-top">
+      <span class="admin-nav-titulo">Administración</span>
+      <button type="button" class="admin-nav-cerrar flat" data-admin-cerrar aria-label="Cerrar menú">✕</button>
+    </div>
+    <div class="admin-nav-grupo">
+      <p class="admin-nav-grupo-titulo" id="admin-grupo-dia">Tu día</p>
+      <ul aria-labelledby="admin-grupo-dia">
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin}" th:attr="aria-current=${activa == 'inicio' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">🏠</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Inicio</span><span class="admin-nav-hint">Resumen y accesos rápidos</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin/menu-hoy}" th:attr="aria-current=${activa == 'menu-hoy' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">📋</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Menú de hoy</span><span class="admin-nav-hint">Qué se vende hoy y cuántas porciones</span></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div class="admin-nav-grupo">
+      <p class="admin-nav-grupo-titulo" id="admin-grupo-catalogo">Tu catálogo</p>
+      <ul aria-labelledby="admin-grupo-catalogo">
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin/productos}" th:attr="aria-current=${activa == 'productos' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">🍽️</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Productos</span><span class="admin-nav-hint">Fotos, precios y tamaños</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin/categorias}" th:attr="aria-current=${activa == 'categorias' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">🗂️</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Categorías</span><span class="admin-nav-hint">Pestañas del menú y sus íconos</span></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div class="admin-nav-grupo">
+      <p class="admin-nav-grupo-titulo" id="admin-grupo-negocio">Tu negocio</p>
+      <ul aria-labelledby="admin-grupo-negocio">
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin/local}" th:attr="aria-current=${activa == 'local' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">🪑</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Mi local</span><span class="admin-nav-hint">Mesas, nombres y moneda</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin/usuarios}" th:attr="aria-current=${activa == 'usuarios' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">👥</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Usuarios</span><span class="admin-nav-hint">Meseros, cocina y accesos</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin/apariencia}" th:attr="aria-current=${activa == 'apariencia' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">🎨</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Apariencia</span><span class="admin-nav-hint">Nombre, logo y colores</span></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div class="admin-nav-grupo">
+      <p class="admin-nav-grupo-titulo" id="admin-grupo-control">Control</p>
+      <ul aria-labelledby="admin-grupo-control">
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin/reportes}" th:attr="aria-current=${activa == 'reportes' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">📊</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Reportes</span><span class="admin-nav-hint">Ventas, productos y personal</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="admin-nav-item" th:href="@{/admin/actividad}" th:attr="aria-current=${activa == 'actividad' ? 'page' : null}">
+            <span class="admin-nav-icono" aria-hidden="true">🕒</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Actividad</span><span class="admin-nav-hint">Quién hizo qué y cuándo</span></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div class="admin-nav-pie">
+      <p class="admin-nav-grupo-titulo" id="admin-grupo-vistas">Vistas del personal</p>
+      <ul aria-labelledby="admin-grupo-vistas">
+        <li>
+          <a class="admin-nav-vista" th:href="@{/mesero}">
+            <span aria-hidden="true">🧾</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label" th:text="${negocio.etiquetaRolMesero}" data-negocio-texto="etiquetaRolMesero">Mesero</span><span class="admin-nav-hint">Ir a vista de atención</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="admin-nav-vista" th:href="@{/cocina}">
+            <span aria-hidden="true">🍳</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label" th:text="${negocio.etiquetaRolCocina}" data-negocio-texto="etiquetaRolCocina">Cocina</span><span class="admin-nav-hint">Ir a vista de preparación</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="admin-nav-vista" th:href="@{/catalogo}">
+            <span aria-hidden="true">📖</span>
+            <span class="admin-nav-texto"><span class="admin-nav-label">Catálogo</span><span class="admin-nav-hint">Lo que ve tu cliente, con fotos</span></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+</th:block>
+</body>
+</html>

@@ -52,7 +52,7 @@ public class DetallePedido {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "acompanante_sopa_id", nullable = true)
     @JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
-    private Plato acompananteSopa;   // sin sopa va en null :v
+    private Plato acompananteSopa;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "presentacion_id", nullable = true)

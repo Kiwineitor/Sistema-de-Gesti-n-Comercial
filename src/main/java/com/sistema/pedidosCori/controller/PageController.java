@@ -10,10 +10,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PageController {
 
-    // Cada rol aterriza en su vista principal
     @GetMapping("/")
     public String home(Authentication auth) {
-        if (tieneRol(auth, "ROLE_ADMIN"))  return "redirect:/menu";
+        if (tieneRol(auth, "ROLE_ADMIN"))  return "redirect:/admin";
         if (tieneRol(auth, "ROLE_COCINA")) return "redirect:/cocina";
         return "redirect:/mesero";
     }
@@ -26,6 +25,9 @@ public class PageController {
 
     @GetMapping("/mesero")
     public String mesero() { return "mesero"; }
+
+    @GetMapping("/catalogo")
+    public String catalogo() { return "catalogo"; }
 
     @GetMapping("/cocina")
     public String cocina() { return "cocina"; }

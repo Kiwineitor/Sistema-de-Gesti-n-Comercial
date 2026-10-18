@@ -7,6 +7,7 @@ import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -46,10 +47,23 @@ public class Plato {
 
     private Boolean disponible = true;
 
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean archivado = false;
+
     @Column(name = "stock_disponible")
     private Integer stockDisponible;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Column(name = "imagen_version")
+    private Long imagenVersion;
 
     @OneToMany(mappedBy = "plato", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonIgnoreProperties("plato")
     private List<PresentacionPlato> presentaciones = new ArrayList<>();
+
+    @JsonProperty(value = "imagenUrl", access = JsonProperty.Access.READ_ONLY)
+    public String getImagenUrl() {
+        return id == null || imagenVersion == null ? null : "/api/platos/" + id + "/imagen?v=" + imagenVersion;
+    }
 }

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="|Menú de hoy — ${negocio.nombreNegocio}|">Menú de hoy</title>
+  <th:block th:replace="~{fragments/head :: branding}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+  <link rel="stylesheet" th:href="@{/css/admin-menu-hoy.css}">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script defer th:src="@{/js/security.js}"></script>
+  <script defer th:src="@{/js/borradores.js}"></script>
+  <script defer th:src="@{/js/admin-shell.js}"></script>
+  <script defer th:src="@{/js/admin-menu-hoy.js}"></script>
+</head>
+<body class="admin-shell">
+  <div th:replace="~{fragments/admin-layout :: barra('menu-hoy')}"></div>
+  <main class="admin-main menu-hoy-main" id="contenido" tabindex="-1">
+    <header class="admin-page-head">
+      <div>
+        <h1>Menú de hoy</h1>
+        <p class="menu-hoy-fecha" id="menu-hoy-fecha"></p>
+        <p class="admin-page-desc">Elige qué productos vendes hoy y cuántas porciones tienes. Para crear o cambiar productos usa «Productos».</p>
+      </div>
+      <div class="admin-page-actions">
+        <a class="button-secondary" th:href="@{/admin/productos}" href="/admin/productos">Administrar productos</a>
+        <a class="button-secondary" th:href="@{/admin/categorias}" href="/admin/categorias">Categorías</a>
+      </div>
+    </header>
+
+    <div id="menu-hoy-avisos"></div>
+
+    <section class="toolbar" aria-label="Buscar y filtrar productos">
+      <div class="tb-row">
+        <div class="tb-search">
+          <label for="buscar" class="visually-hidden">Buscar producto por nombre</label>
+          <span class="tb-search-ico" aria-hidden="true">🔍</span>
+          <input type="search" id="buscar" placeholder="Buscar producto…" autocomplete="off" spellcheck="false">
+        </div>
+        <span class="tb-resumen" id="tb-resumen" aria-live="polite">0 activos hoy</span>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="Filtrar por categoría"></div>
+    </section>
+
+    <div class="content" id="menu-scroll">
+      <div class="cat-grid" id="menu-container">
+        <p class="empty-msg">Cargando menú…</p>
+      </div>
+      <div class="empty-state" id="empty-state" role="status" hidden>
+        <p id="empty-text">Sin resultados</p>
+        <button type="button" class="btn-limpiar" id="btn-limpiar">Limpiar filtros</button>
+      </div>
+    </div>
+
+    <footer class="actions-bar admin-actionbar">
+      <div class="ab-status" aria-live="polite">
+        <span class="ab-activos" id="ab-activos">0 productos activos</span>
+        <span class="ab-estado pendiente" id="ab-pendiente" hidden>Cambios sin publicar</span>
+        <span class="ab-estado" id="ab-al-dia">Menú publicado al día</span>
+      </div>
+      <div class="ab-buttons">
+        <button type="button" class="ab-btn ab-primary" id="btn-save">Publicar menú del día</button>
+        <button type="button" class="ab-btn ab-secondary" id="btn-img">Descargar imagen</button>
+      </div>
+    </footer>
+  </main>
+
+  <div id="export-wrap" aria-hidden="true">
+    <div id="menu-canvas">
+      <div class="mc-content">
+        <div class="mc-header">
+          <h1 class="mc-title" th:text="${negocio.nombreNegocio}">Gestión Comercial</h1>
+          <div class="mc-date" id="cv-date">HOY</div>
+          <div class="mc-subtitle">MENÚ DEL DÍA</div>
+        </div>
+        <div class="mc-grid" id="cv-categorias"></div>
+        <div class="mc-footer">
+          <img th:src="${negocio.logoUrl}" class="mc-logo" crossorigin="anonymous" th:alt="|Logo de ${negocio.nombreNegocio}|">
+          <div class="mc-contact-wrap" th:if="${!#strings.isEmpty(negocio.eslogan)}" th:text="${negocio.eslogan}"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

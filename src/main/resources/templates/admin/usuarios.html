@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="|Usuarios — ${negocio.nombreNegocio}|">Usuarios</title>
+  <th:block th:replace="~{fragments/head :: branding}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+  <link rel="stylesheet" th:href="@{/css/admin-usuarios.css}">
+  <script defer th:src="@{/js/security.js}"></script>
+  <script defer th:src="@{/js/borradores.js}"></script>
+  <script defer th:src="@{/js/admin-shell.js}"></script>
+  <script defer th:src="@{/js/admin-usuarios.js}"></script>
+</head>
+<body class="admin-shell">
+  <div th:replace="~{fragments/admin-layout :: barra('usuarios')}"></div>
+  <main class="admin-main" id="contenido" tabindex="-1"
+        th:data-rol-mesero="${negocio.etiquetaRolMesero}"
+        th:data-rol-cocina="${negocio.etiquetaRolCocina}">
+    <header class="admin-page-head">
+      <div>
+        <h1>Usuarios</h1>
+        <p class="admin-page-desc">Crea las cuentas de tu personal. Cada persona entra con su usuario y solo ve la pantalla que le corresponde.</p>
+      </div>
+      <div class="admin-page-actions">
+        <button type="button" class="button-primary usr-btn" id="usr-agregar">
+          <svg class="usr-icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Agregar persona
+        </button>
+      </div>
+    </header>
+
+    <div class="borrador-aviso usr-aviso" id="usr-aviso-borrador" role="status" hidden>
+      <p id="usr-aviso-texto">Tienes un formulario sin terminar.</p>
+      <div class="usr-aviso-acciones">
+        <button type="button" class="button-primary usr-btn" id="usr-aviso-continuar">Continuar</button>
+        <button type="button" class="button-secondary usr-btn" id="usr-aviso-descartar">Descartar</button>
+      </div>
+    </div>
+
+    <section class="admin-card usr-roles" aria-labelledby="usr-roles-titulo">
+      <div class="admin-card-head">
+        <h2 id="usr-roles-titulo">¿Qué puede hacer cada rol?</h2>
+      </div>
+      <div class="admin-card-body">
+        <ul class="usr-roles-lista">
+          <li>
+            <span class="usr-rol-icono usr-rol-icono-admin" aria-hidden="true">
+              <svg class="usr-icono" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/></svg>
+            </span>
+            <div>
+              <strong>Administrador</strong>
+              <p>Puede hacer todo: el menú, los datos del local, los usuarios y los reportes. También puede usar las otras pantallas.</p>
+            </div>
+          </li>
+          <li>
+            <span class="usr-rol-icono usr-rol-icono-mesero" aria-hidden="true">
+              <svg class="usr-icono" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            </span>
+            <div>
+              <strong th:text="${negocio.etiquetaRolMesero}">Mesero</strong>
+              <p>Toma pedidos y cobra. Usa la pantalla de atención.</p>
+            </div>
+          </li>
+          <li>
+            <span class="usr-rol-icono usr-rol-icono-cocina" aria-hidden="true">
+              <svg class="usr-icono" viewBox="0 0 24 24"><path d="M6 12h12M7 12v7h10v-7M9 12V8a3 3 0 0 1 6 0v4"/></svg>
+            </span>
+            <div>
+              <strong th:text="${negocio.etiquetaRolCocina}">Cocina</strong>
+              <p>Ve los pedidos y los prepara. Usa la pantalla de preparación.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="usr-stats" id="usr-stats" aria-label="Resumen de cuentas"></section>
+
+    <section class="admin-card" aria-labelledby="usr-lista-titulo">
+      <div class="admin-card-head">
+        <h2 id="usr-lista-titulo">Personal</h2>
+      </div>
+      <div class="admin-card-body">
+        <div class="admin-toolbar usr-toolbar admin-filtros-fijos" id="usr-toolbar" role="search">
+          <label class="admin-field usr-buscar">
+            <span>Buscar</span>
+            <input type="search" class="field" id="usr-buscar" placeholder="Nombre o usuario" autocomplete="off">
+          </label>
+          <label class="admin-field">
+            <span>Rol</span>
+            <select class="field" id="usr-filtro-rol">
+              <option value="">Todos los roles</option>
+              <option value="ADMIN">Administrador</option>
+              <option value="MESERO" th:text="${negocio.etiquetaRolMesero}">Mesero</option>
+              <option value="COCINA" th:text="${negocio.etiquetaRolCocina}">Cocina</option>
+            </select>
+          </label>
+          <label class="admin-field">
+            <span>Estado</span>
+            <select class="field" id="usr-filtro-estado">
+              <option value="">Todos</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Desactivados</option>
+            </select>
+          </label>
+        </div>
+        <p class="usr-resultado" id="usr-resultado" aria-live="polite"></p>
+        <div id="usr-lista" class="admin-table-wrap admin-table-scroll usr-scroll" data-scroll-pista data-alto-ventana="24" data-alto-ancla="#usr-toolbar"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="dialog-ui usr-dialog" id="usr-dialogo" aria-labelledby="usr-dialogo-titulo"></dialog>
+
+  <template id="usr-tpl-form">
+    <form class="usr-form" novalidate>
+      <div class="usr-dialog-head">
+        <h2 id="usr-dialogo-titulo">Agregar persona</h2>
+        <button type="button" class="usr-cerrar flat" data-cerrar aria-label="Cerrar">
+          <svg class="usr-icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="usr-dialog-body">
+        <p class="usr-dialog-intro" data-intro></p>
+        <label class="admin-field">
+          <span>Nombre completo</span>
+          <input type="text" class="field" name="nombreCompleto" maxlength="80" autocomplete="off" required>
+          <small class="admin-help">Como quieres que aparezca en los pedidos y en el historial.</small>
+          <small class="admin-error" data-error="nombreCompleto" hidden></small>
+        </label>
+
+        <label class="admin-field" data-solo-nuevo>
+          <span>Usuario</span>
+          <input type="text" class="field" name="username" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="email" required>
+          <small class="admin-help">Es el nombre con el que la persona entra. Se sugiere a partir del nombre; puedes cambiarlo.</small>
+          <ul class="usr-pistas" data-pistas aria-live="polite">
+            <li data-pista="largo">Entre 3 y 40 caracteres</li>
+            <li data-pista="caracteres">Solo letras minúsculas, números, punto, guion o guion bajo</li>
+            <li data-pista="libre">Que nadie más lo esté usando</li>
+          </ul>
+          <small class="admin-error" data-error="username" hidden></small>
+        </label>
+
+        <div class="admin-field usr-usuario-fijo" data-solo-edicion hidden>
+          <span>Usuario</span>
+          <strong data-usuario-fijo></strong>
+          <small class="admin-help">El usuario no se puede cambiar.</small>
+        </div>
+
+        <fieldset class="usr-rol-grupo">
+          <legend>Rol</legend>
+          <p class="admin-help">Elige qué pantalla va a usar esta persona.</p>
+          <div class="usr-rol-opciones">
+            <label class="usr-rol-opcion">
+              <input type="radio" name="rol" value="ADMIN" class="visually-hidden">
+              <span class="usr-rol-card">
+                <span class="usr-rol-icono usr-rol-icono-admin" aria-hidden="true">
+                  <svg class="usr-icono" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/></svg>
+                </span>
+                <span class="usr-rol-texto">
+                  <strong>Administrador</strong>
+                  <small>Todo: menú, local, usuarios y reportes.</small>
+                </span>
+              </span>
+            </label>
+            <label class="usr-rol-opcion">
+              <input type="radio" name="rol" value="MESERO" class="visually-hidden">
+              <span class="usr-rol-card">
+                <span class="usr-rol-icono usr-rol-icono-mesero" aria-hidden="true">
+                  <svg class="usr-icono" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+                </span>
+                <span class="usr-rol-texto">
+                  <strong data-etiqueta-rol="MESERO">Mesero</strong>
+                  <small>Toma pedidos y cobra.</small>
+                </span>
+              </span>
+            </label>
+            <label class="usr-rol-opcion">
+              <input type="radio" name="rol" value="COCINA" class="visually-hidden">
+              <span class="usr-rol-card">
+                <span class="usr-rol-icono usr-rol-icono-cocina" aria-hidden="true">
+                  <svg class="usr-icono" viewBox="0 0 24 24"><path d="M6 12h12M7 12v7h10v-7M9 12V8a3 3 0 0 1 6 0v4"/></svg>
+                </span>
+                <span class="usr-rol-texto">
+                  <strong data-etiqueta-rol="COCINA">Cocina</strong>
+                  <small>Ve y prepara los pedidos.</small>
+                </span>
+              </span>
+            </label>
+          </div>
+          <small class="admin-help" data-ayuda-rol hidden></small>
+          <small class="admin-error" data-error="rol" hidden></small>
+        </fieldset>
+
+        <div class="admin-field" data-solo-nuevo>
+          <label for="usr-password-nuevo">Contraseña temporal</label>
+          <div class="usr-password">
+            <input type="password" class="field" id="usr-password-nuevo" name="password" maxlength="72" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+            <button type="button" class="button-secondary usr-btn" data-ver-password aria-pressed="false">Mostrar</button>
+            <button type="button" class="button-secondary usr-btn" data-generar>Generar</button>
+          </div>
+          <small class="admin-help">Entrégasela a la persona; podrá usarla para entrar. Mínimo 8 caracteres.</small>
+          <small class="admin-error" data-error="password" hidden></small>
+        </div>
+
+        <div class="admin-field usr-activo" data-solo-edicion hidden>
+          <label class="usr-switch">
+            <input type="checkbox" name="activo" role="switch">
+            <span class="usr-switch-pista" aria-hidden="true"></span>
+            <span>Cuenta activa</span>
+          </label>
+          <small class="admin-help" data-ayuda-activo>Si la desactivas, la persona no podrá entrar, pero su historial se conserva.</small>
+        </div>
+
+        <p class="admin-help usr-aviso-sesion" data-solo-edicion hidden>Si cambias el rol o desactivas la cuenta, la persona tendrá que volver a entrar.</p>
+      </div>
+      <div class="usr-dialog-foot">
+        <button type="button" class="button-secondary usr-btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="button-primary usr-btn" data-guardar>Guardar</button>
+      </div>
+    </form>
+  </template>
+
+  <template id="usr-tpl-password">
+    <form class="usr-form" novalidate>
+      <div class="usr-dialog-head">
+        <h2 id="usr-dialogo-titulo">Restablecer contraseña</h2>
+        <button type="button" class="usr-cerrar flat" data-cerrar aria-label="Cerrar">
+          <svg class="usr-icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="usr-dialog-body">
+        <p class="usr-dialog-intro" data-intro></p>
+        <div class="admin-field">
+          <label for="usr-password-reset">Nueva contraseña</label>
+          <div class="usr-password">
+            <input type="password" class="field" id="usr-password-reset" name="password" maxlength="72" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+            <button type="button" class="button-secondary usr-btn" data-ver-password aria-pressed="false">Mostrar</button>
+            <button type="button" class="button-secondary usr-btn" data-generar>Generar</button>
+          </div>
+          <small class="admin-help">Mínimo 8 caracteres. Entrégasela a la persona; con ella podrá volver a entrar.</small>
+          <small class="admin-error" data-error="password" hidden></small>
+        </div>
+      </div>
+      <div class="usr-dialog-foot">
+        <button type="button" class="button-secondary usr-btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="button-primary usr-btn" data-guardar>Cambiar contraseña</button>
+      </div>
+    </form>
+  </template>
+
+  <template id="usr-tpl-credenciales">
+    <div class="usr-form">
+      <div class="usr-dialog-head">
+        <h2 id="usr-dialogo-titulo" data-titulo>Cuenta lista</h2>
+        <button type="button" class="usr-cerrar flat" data-cerrar aria-label="Cerrar">
+          <svg class="usr-icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="usr-dialog-body">
+        <p class="usr-dialog-intro" data-intro></p>
+        <dl class="usr-credenciales">
+          <div><dt>Usuario</dt><dd data-cred-usuario></dd></div>
+          <div><dt>Contraseña</dt><dd data-cred-password></dd></div>
+        </dl>
+        <p class="usr-una-vez">Esta contraseña solo se muestra ahora. Anótala o cópiala antes de cerrar.</p>
+      </div>
+      <div class="usr-dialog-foot">
+        <button type="button" class="button-secondary usr-btn" data-copiar>Copiar</button>
+        <button type="button" class="button-primary usr-btn" data-cerrar>Listo, ya la entregué</button>
+      </div>
+    </div>
+  </template>
+</body>
+</html>

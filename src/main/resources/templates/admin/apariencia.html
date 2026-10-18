@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="|Apariencia — ${negocio.nombreNegocio}|">Apariencia</title>
+  <th:block th:replace="~{fragments/head :: branding}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+  <script defer th:src="@{/js/security.js}"></script>
+  <script defer th:src="@{/js/borradores.js}"></script>
+  <script defer th:src="@{/js/admin-shell.js}"></script>
+  <script defer th:src="@{/js/admin-apariencia.js}"></script>
+</head>
+<body class="admin-shell">
+  <div th:replace="~{fragments/admin-layout :: barra('apariencia')}"></div>
+  <main class="admin-main" id="contenido" tabindex="-1">
+    <header class="admin-page-head">
+      <div>
+        <h1>Apariencia</h1>
+        <p class="admin-page-desc">Elige el nombre, el logo y los colores de tu negocio. Se verán en la pantalla de ingreso y en todas las vistas de tu personal.</p>
+      </div>
+    </header>
+
+    <div class="apariencia-layout">
+      <form id="form-apariencia" class="apariencia-form" novalidate>
+        <section class="admin-card" aria-labelledby="titulo-nombre">
+          <div class="admin-card-head">
+            <h2 id="titulo-nombre">Nombre de tu negocio</h2>
+            <p>Así te verán tus clientes y tu personal.</p>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-form-grid">
+              <div class="admin-field">
+                <label for="nombreNegocio">Nombre</label>
+                <input class="field" id="nombreNegocio" name="nombreNegocio" maxlength="120" required aria-describedby="error-nombreNegocio" th:value="${negocio.nombreNegocio}">
+                <p class="admin-error" id="error-nombreNegocio" aria-live="polite"></p>
+              </div>
+              <div class="admin-field">
+                <label for="eslogan">Frase corta (opcional)</label>
+                <input class="field" id="eslogan" name="eslogan" maxlength="240" placeholder="Ej.: Comida casera desde 1998" th:value="${negocio.eslogan}">
+                <p class="admin-help">Aparece al pie de la imagen del menú.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-card" aria-labelledby="titulo-colores">
+          <div class="admin-card-head">
+            <h2 id="titulo-colores">Colores</h2>
+            <p>Toca un color para cambiarlo. A la derecha ves cómo queda.</p>
+          </div>
+          <div class="admin-card-body">
+            <div class="apariencia-colores">
+              <div class="admin-field apariencia-color">
+                <label for="colorPrimario">Principal</label>
+                <div class="apariencia-color-fila">
+                  <input id="colorPrimario" name="colorPrimario" type="color" th:value="${negocio.colorPrimario}">
+                  <code id="codigo-colorPrimario"></code>
+                </div>
+                <p class="admin-help">Barra superior y botones principales.</p>
+              </div>
+              <div class="admin-field apariencia-color">
+                <label for="colorSecundario">Secundario</label>
+                <div class="apariencia-color-fila">
+                  <input id="colorSecundario" name="colorSecundario" type="color" th:value="${negocio.colorSecundario}">
+                  <code id="codigo-colorSecundario"></code>
+                </div>
+                <p class="admin-help">Etiquetas y detalles.</p>
+              </div>
+              <div class="admin-field apariencia-color">
+                <label for="colorAcento">Resaltado</label>
+                <div class="apariencia-color-fila">
+                  <input id="colorAcento" name="colorAcento" type="color" th:value="${negocio.colorAcento}">
+                  <code id="codigo-colorAcento"></code>
+                </div>
+                <p class="admin-help">Botones de acción, como «Cobrar».</p>
+              </div>
+            </div>
+            <p id="contrast-warning" class="apariencia-aviso" role="status" hidden></p>
+          </div>
+        </section>
+
+        <section class="admin-card" aria-labelledby="titulo-logo">
+          <div class="admin-card-head">
+            <h2 id="titulo-logo">Logo</h2>
+            <p>Imagen PNG, JPG, SVG o WebP de hasta 1 MB. El logo se guarda aparte con su propio botón.</p>
+          </div>
+          <div class="admin-card-body apariencia-logo">
+            <img id="logo-actual" class="apariencia-logo-img" th:src="${negocio.logoUrl}" alt="Logo actual">
+            <div class="admin-field">
+              <label for="logo">Elegir imagen</label>
+              <input class="field" id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp">
+              <p class="admin-help">Verás la vista previa antes de guardarlo.</p>
+              <div><button class="button-secondary" type="button" id="upload-logo" disabled>Guardar logo</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-card apariencia-peligro" aria-labelledby="titulo-restablecer">
+          <div class="admin-card-head">
+            <h2 id="titulo-restablecer">Volver a empezar</h2>
+            <p>Borra el nombre, los colores, los nombres de tu local y el logo personalizados, y deja los valores de fábrica.</p>
+          </div>
+          <div class="admin-card-body">
+            <button class="button-secondary apariencia-btn-peligro" type="button" id="reset-config">Restablecer valores por defecto</button>
+          </div>
+        </section>
+
+        <div class="admin-actionbar">
+          <span class="admin-actionbar-estado" id="apariencia-estado" aria-live="polite">Todo está guardado.</span>
+          <div class="admin-actionbar-botones">
+            <button type="button" class="button-secondary" id="apariencia-deshacer" disabled>Deshacer cambios</button>
+            <button type="submit" class="button-primary" id="apariencia-guardar">Guardar cambios</button>
+          </div>
+        </div>
+      </form>
+
+      <aside class="admin-card apariencia-preview" aria-labelledby="titulo-preview">
+        <div class="admin-card-head">
+          <h2 id="titulo-preview">Así se verá</h2>
+          <p>Vista previa con tus colores.</p>
+        </div>
+        <div class="admin-card-body">
+          <div class="apariencia-mock">
+            <div class="apariencia-mock-header" id="preview-header">
+              <img id="preview-logo" th:src="${negocio.logoUrl}" alt="">
+              <span id="preview-name-header" th:text="${negocio.nombreNegocio}">Gestión Comercial</span>
+            </div>
+            <div class="apariencia-mock-body">
+              <strong id="preview-name" class="apariencia-mock-titulo" th:text="${negocio.nombreNegocio}">Gestión Comercial</strong>
+              <p id="preview-slogan" class="apariencia-mock-eslogan" th:text="${negocio.eslogan}"></p>
+              <p class="apariencia-mock-tags"><span id="preview-point" th:text="|${negocio.puntoAtencionSingular} 3|">Mesa 3</span><span id="preview-takeaway" th:text="${negocio.etiquetaParaLlevar}">Para llevar</span></p>
+              <span class="apariencia-mock-boton" id="preview-button">Cobrar</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

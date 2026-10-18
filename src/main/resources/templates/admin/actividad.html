@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="|Actividad — ${negocio.nombreNegocio}|">Actividad</title>
+  <th:block th:replace="~{fragments/head :: branding}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+  <link rel="stylesheet" th:href="@{/css/admin-actividad.css}">
+  <script defer th:src="@{/js/security.js}"></script>
+  <script defer th:src="@{/js/borradores.js}"></script>
+  <script defer th:src="@{/js/admin-shell.js}"></script>
+  <script defer th:src="@{/js/admin-actividad.js}"></script>
+</head>
+<body class="admin-shell">
+  <div th:replace="~{fragments/admin-layout :: barra('actividad')}"></div>
+  <main class="admin-main" id="contenido" tabindex="-1">
+    <header class="admin-page-head">
+      <div>
+        <h1>Actividad</h1>
+        <p class="admin-page-desc">Aquí queda registrado quién hizo cada acción importante: pedidos, cobros, cambios en el menú, en la configuración y en los usuarios.</p>
+      </div>
+      <div class="admin-page-actions">
+        <button type="button" class="button-secondary act-btn" id="act-actualizar">Actualizar</button>
+      </div>
+    </header>
+
+    <section class="admin-card act-filtros admin-filtros-fijos" id="act-filtros" aria-labelledby="act-filtros-titulo">
+      <div class="admin-card-head">
+        <h2 id="act-filtros-titulo">Filtrar</h2>
+      </div>
+      <div class="admin-card-body">
+        <form class="act-form" id="act-form" role="search" novalidate>
+          <div class="act-rapidos" role="group" aria-label="Fechas rápidas">
+            <button type="button" class="button-secondary act-btn" data-rango="hoy" aria-pressed="false">Hoy</button>
+            <button type="button" class="button-secondary act-btn" data-rango="ayer" aria-pressed="false">Ayer</button>
+            <button type="button" class="button-secondary act-btn" data-rango="semana" aria-pressed="false">Últimos 7 días</button>
+            <button type="button" class="button-secondary act-btn" data-rango="mes" aria-pressed="false">Este mes</button>
+          </div>
+          <div class="admin-toolbar act-toolbar">
+            <label class="admin-field">
+              <span>Persona</span>
+              <select class="field" name="usuario" id="act-usuario">
+                <option value="">Todas las personas</option>
+              </select>
+            </label>
+            <label class="admin-field">
+              <span>Acción</span>
+              <select class="field" name="accion" id="act-accion">
+                <option value="">Todas las acciones</option>
+              </select>
+            </label>
+            <label class="admin-field">
+              <span>Desde</span>
+              <input type="date" class="field" name="desde" id="act-desde">
+            </label>
+            <label class="admin-field">
+              <span>Hasta</span>
+              <input type="date" class="field" name="hasta" id="act-hasta">
+            </label>
+            <div class="act-limpiar">
+              <button type="button" class="button-secondary act-btn" id="act-limpiar">Limpiar filtros</button>
+            </div>
+          </div>
+          <p class="admin-error" id="act-error-fechas" role="alert" hidden></p>
+        </form>
+      </div>
+    </section>
+
+    <section class="admin-card" aria-labelledby="act-resultados-titulo">
+      <div class="admin-card-head act-resultados-head">
+        <h2 id="act-resultados-titulo">Registro</h2>
+        <p class="act-estado" id="act-estado" aria-live="polite"></p>
+      </div>
+      <div class="admin-card-body">
+        <div id="act-lista" class="admin-table-wrap admin-table-scroll act-scroll" data-scroll-pista data-alto-ventana="96" data-alto-ancla="#act-filtros" aria-busy="false"></div>
+        <nav class="act-paginacion" id="act-paginacion" aria-label="Páginas" hidden>
+          <button type="button" class="button-secondary act-btn" id="act-anterior">Anterior</button>
+          <span id="act-pagina-texto"></span>
+          <button type="button" class="button-secondary act-btn" id="act-siguiente">Siguiente</button>
+        </nav>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

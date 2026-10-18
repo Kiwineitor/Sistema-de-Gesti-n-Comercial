@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,22 +24,28 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sistema.pedidosCori.models.dao.IPedidoDao;
+import com.sistema.pedidosCori.models.dao.IDetallePedidoDao;
 import com.sistema.pedidosCori.models.dao.IPlatoDao;
 import com.sistema.pedidosCori.models.dao.IPresentacionPlatoDao;
 import com.sistema.pedidosCori.models.dto.MenuDiarioItemDTO;
 import com.sistema.pedidosCori.models.dto.NotificacionWsDTO;
 import com.sistema.pedidosCori.models.dto.PedidoRequestDTO;
+import com.sistema.pedidosCori.models.dto.PlatoEdicionRequest;
 import com.sistema.pedidosCori.models.dto.PresentacionRequestDTO;
 import com.sistema.pedidosCori.models.dto.ReporteDiarioDTO;
 import com.sistema.pedidosCori.models.dto.StockUpdateDTO;
+import com.sistema.pedidosCori.models.entity.AccionAuditoria;
 import com.sistema.pedidosCori.models.entity.DetallePedido;
 import com.sistema.pedidosCori.models.entity.EstadoPedido;
 import com.sistema.pedidosCori.models.entity.Modalidad;
 import com.sistema.pedidosCori.models.entity.Pedido;
 import com.sistema.pedidosCori.models.entity.Plato;
 import com.sistema.pedidosCori.models.entity.PresentacionPlato;
+import com.sistema.pedidosCori.service.AuditoriaService;
+import com.sistema.pedidosCori.service.CategoriaService;
+import com.sistema.pedidosCori.service.PlatoImagenService;
+import com.sistema.pedidosCori.service.ConfiguracionNegocioService;
 import com.sistema.pedidosCori.service.IPedidoService;
-import com.sistema.pedidosCori.service.PedidoServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 
@@ -47,51 +55,90 @@ import lombok.RequiredArgsConstructor;
 public class ApiController {
     
     private final IPedidoService        pedidoService;
-    private final PedidoServiceImpl     pedidoServiceImpl;
     private final IPedidoDao            pedidoDao;
+    private final IDetallePedidoDao     detallePedidoDao;
     private final IPlatoDao             platoDao;
     private final IPresentacionPlatoDao presentacionPlatoDao;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ConfiguracionNegocioService configuracionNegocioService;
+    private final AuditoriaService auditoria;
+    private final CategoriaService categoriaService;
+    private final PlatoImagenService platoImagenService;
 
-    // Platos
  
     @GetMapping("/platos/todos")
     public ResponseEntity<List<Plato>> getTodosLosPlatos() {
-        return ResponseEntity.ok(platoDao.findAll());
+        return ResponseEntity.ok(platoDao.findByArchivadoFalse());
     }
  
     @GetMapping("/platos")
     public ResponseEntity<List<Plato>> getPlatos() {
-        return ResponseEntity.ok(platoDao.findByDisponibleTrue());
+        return ResponseEntity.ok(platoDao.findByDisponibleTrueAndArchivadoFalse());
     }
  
     @PostMapping("/platos")
     public ResponseEntity<Plato> crearPlato(@RequestBody Plato plato) {
-        plato.setDisponible(true);
-        // if (plato.getStockDisponible() == null) plato.setStockDisponible(0);
-        return ResponseEntity.ok(platoDao.save(plato));
+        plato.setCategoria(categoriaService.codigoValido(plato.getCategoria()));
+        plato.setId(null);
+        plato.setImagenVersion(null);
+        plato.setDescripcion(descripcionValida(plato.getDescripcion()));
+        if (plato.getDisponible() == null) plato.setDisponible(true);
+        plato.setArchivado(false);
+        Plato guardado = platoDao.save(plato);
+        auditoria.registrar(AccionAuditoria.PLATO_CREADO, "Plato", guardado.getId(), () -> describirPlato(guardado));
+        return ResponseEntity.ok(guardado);
     }
  
     @PutMapping("/platos/{id}")
-    public ResponseEntity<Plato> editarPlato(@PathVariable Long id, @RequestBody Plato d) {
-        return platoDao.findById(id).map(p -> {
-            p.setNombre(d.getNombre()); p.setPrecio(d.getPrecio()); p.setCategoria(d.getCategoria());
-            if (d.getStockDisponible() != null) p.setStockDisponible(d.getStockDisponible());
-            return ResponseEntity.ok(platoDao.save(p));
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Plato> editarPlato(@PathVariable Long id, @RequestBody PlatoEdicionRequest d) {
+        return platoDao.findById(id).filter(p -> !Boolean.TRUE.equals(p.getArchivado())).map(p -> {
+            String categoria = categoriaService.codigoValido(d.getCategoria());
+            String descripcion = d.isDescripcionPresente() ? descripcionValida(d.getDescripcion()) : p.getDescripcion();
+            p.setNombre(d.getNombre()); p.setPrecio(d.getPrecio()); p.setCategoria(categoria);
+            p.setDescripcion(descripcion);
+            if (Boolean.TRUE.equals(d.getSinLimite())) p.setStockDisponible(null);
+            else if (d.isStockPresente()) p.setStockDisponible(d.getStockDisponible());
+            Plato guardado = platoDao.save(p);
+            auditoria.registrar(AccionAuditoria.PLATO_EDITADO, "Plato", guardado.getId(), () -> describirPlato(guardado));
+            return ResponseEntity.ok(guardado);
+        }).orElseThrow(() -> new java.util.NoSuchElementException("Plato no encontrado: " + id));
+    }
+
+    @DeleteMapping("/platos/{id}")
+    @Transactional
+    public ResponseEntity<Void> eliminarPlato(@PathVariable Long id) {
+        Plato plato = platoDao.findById(id)
+            .orElseThrow(() -> new java.util.NoSuchElementException("Plato no encontrado: " + id));
+        if (detallePedidoDao.existsByPlatoIdOrAcompananteSopaId(id, id)) {
+            plato.setArchivado(true);
+            plato.setDisponible(false);
+            platoDao.save(plato);
+            auditoria.registrar(AccionAuditoria.PLATO_ARCHIVADO, "Plato", id,
+                () -> plato.getNombre() + " · Se archivó porque tiene pedidos registrados");
+        } else {
+            platoImagenService.borrarDatos(id);
+            platoDao.delete(plato);
+            auditoria.registrar(AccionAuditoria.PLATO_ELIMINADO, "Plato", id, () -> describirPlato(plato));
+        }
+        messagingTemplate.convertAndSend("/topic/menu",
+            NotificacionWsDTO.builder().tipo("ACTUALIZACION_MENU").mensaje("Plato eliminado").build());
+        return ResponseEntity.noContent().build();
     }
  
-    // Presentaciones (tamaños/precios por plato)
  
         @GetMapping("/platos/{id}/presentaciones")
     public ResponseEntity<List<PresentacionPlato>> getPresentaciones(
             @PathVariable Long id,
             @RequestParam(required = false) String tipo) {
+
+        if (platoDao.findById(id).filter(p -> !Boolean.TRUE.equals(p.getArchivado())).isEmpty()) {
+            throw new java.util.NoSuchElementException("Plato no encontrado: " + id);
+        }
  
         if (tipo != null) {
             Modalidad mod;
             try { mod = Modalidad.valueOf(tipo.toUpperCase()); }
-            catch (IllegalArgumentException e) { return ResponseEntity.badRequest().build(); }
+            catch (IllegalArgumentException e) { throw new IllegalArgumentException("Modalidad no válida"); }
  
             List<Modalidad> filtro = List.of(mod, Modalidad.AMBAS);
             return ResponseEntity.ok(
@@ -105,7 +152,7 @@ public class ApiController {
     @PostMapping("/platos/{id}/presentaciones")
     public ResponseEntity<PresentacionPlato> crearPresentacion(
             @PathVariable Long id, @RequestBody PresentacionRequestDTO dto) {
-        return platoDao.findById(id).map(plato -> {
+        return platoDao.findById(id).filter(plato -> !Boolean.TRUE.equals(plato.getArchivado())).map(plato -> {
             PresentacionPlato pres = PresentacionPlato.builder()
                 .plato(plato)
                 .nombre(dto.getNombre())
@@ -115,10 +162,12 @@ public class ApiController {
                 .modalidad(dto.getModalidad() != null ? dto.getModalidad() : Modalidad.AMBAS)
                 .build();
             PresentacionPlato saved = presentacionPlatoDao.save(pres);
+            auditoria.registrar(AccionAuditoria.PRESENTACION_CREADA, "PresentacionPlato", saved.getId(),
+                () -> describirPresentacion(saved));
             messagingTemplate.convertAndSend("/topic/menu",
                 NotificacionWsDTO.builder().tipo("ACTUALIZACION_MENU").build());
             return ResponseEntity.ok(saved);
-        }).orElse(ResponseEntity.notFound().build());
+        }).orElseThrow(() -> new java.util.NoSuchElementException("Plato no encontrado: " + id));
     }
  
     @PutMapping("/presentaciones/{id}")
@@ -130,19 +179,24 @@ public class ApiController {
             if (dto.getStockDisponible() != null) p.setStockDisponible(dto.getStockDisponible());
             if (dto.getDisponible()   != null) p.setDisponible(dto.getDisponible());
             if (dto.getModalidad()    != null) p.setModalidad(dto.getModalidad());
-            return ResponseEntity.ok(presentacionPlatoDao.save(p));
-        }).orElse(ResponseEntity.notFound().build());
+            PresentacionPlato guardada = presentacionPlatoDao.save(p);
+            auditoria.registrar(AccionAuditoria.PRESENTACION_EDITADA, "PresentacionPlato", guardada.getId(),
+                () -> describirPresentacion(guardada));
+            return ResponseEntity.ok(guardada);
+        }).orElseThrow(() -> new java.util.NoSuchElementException("Presentación no encontrada: " + id));
     }
  
     @DeleteMapping("/presentaciones/{id}")
     public ResponseEntity<Void> eliminarPresentacion(@PathVariable Long id) {
+        String descripcion = presentacionPlatoDao.findById(id).map(this::describirPresentacion).orElse(null);
         presentacionPlatoDao.deleteById(id);
+        if (descripcion != null)
+            auditoria.registrar(AccionAuditoria.PRESENTACION_ELIMINADA, "PresentacionPlato", id, descripcion);
         messagingTemplate.convertAndSend("/topic/menu",
             NotificacionWsDTO.builder().tipo("ACTUALIZACION_MENU").mensaje("Presentacion eliminada").build());
         return ResponseEntity.ok().build();
     }
  
-    // Pedidos — crear
  
     @PostMapping("/pedidos")
     @Transactional
@@ -166,7 +220,6 @@ public class ApiController {
         return ResponseEntity.ok(pedido);
     }
  
-    // Pedidos — agregar items a comanda abierta 
  
     @PostMapping("/pedidos/{id}/detalles")
     @Transactional
@@ -174,21 +227,13 @@ public class ApiController {
             @PathVariable Long id,
             @RequestBody List<PedidoRequestDTO.DetalleRequestDTO> nuevosDetalles) {
  
-        Pedido pedido = pedidoService.obtenerPorId(id);
- 
-        List<DetallePedido> nuevos = nuevosDetalles.stream()
-            .map(d -> pedidoServiceImpl.construirDetalle(pedido, d))
-            .collect(Collectors.toList());
- 
-        pedido.getDetalles().addAll(nuevos);
-        pedido.setTotal(pedido.getDetalles().stream().mapToDouble(DetallePedido::getSubtotal).sum());
-        Pedido saved = pedidoDao.save(pedido);
+        Pedido saved = pedidoService.agregarDetalles(id, nuevosDetalles);
  
         Map<Long,Integer> descPlato=new HashMap<>(), descPres=new HashMap<>(), descSopa=new HashMap<>();
-        nuevos.forEach(d -> {
-            if (d.getPresentacion() != null) descPres.merge(d.getPresentacion().getId(), d.getCantidad(), Integer::sum);
-            else descPlato.merge(d.getPlato().getId(), d.getCantidad(), Integer::sum);
-            if (d.getAcompananteSopa() != null) descSopa.merge(d.getAcompananteSopa().getId(), d.getCantidad(), Integer::sum);
+        nuevosDetalles.forEach(d -> {
+            if (d.getPresentacionId() != null) descPres.merge(d.getPresentacionId(), d.getCantidad(), Integer::sum);
+            else descPlato.merge(d.getPlatoId(), d.getCantidad(), Integer::sum);
+            if (d.getAcompananteSopaId() != null) descSopa.merge(d.getAcompananteSopaId(), d.getCantidad(), Integer::sum);
         });
         aplicarDescuentoStock(descPlato, descPres, descSopa);
  
@@ -201,10 +246,17 @@ public class ApiController {
         return ResponseEntity.ok(saved);
     }
  
-    // ── Estado / activos / pagoooooo
  
     @PutMapping("/pedidos/{id}/estado")
-    public ResponseEntity<Pedido> actualizarEstado(@PathVariable Long id, @RequestParam EstadoPedido estado) {
+    public ResponseEntity<Pedido> actualizarEstado(@PathVariable Long id, @RequestParam EstadoPedido estado,
+            Authentication authentication) {
+        boolean admin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean cocina = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_COCINA"));
+        boolean mesero = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MESERO"));
+        if (!admin && !((cocina && (estado == EstadoPedido.EN_PREPARACION || estado == EstadoPedido.LISTO))
+                || (mesero && estado == EstadoPedido.ENTREGADO))) {
+            throw new AccessDeniedException("No tienes permiso para esa transición");
+        }
         Pedido pedido = pedidoService.actualizarEstado(id, estado);
         String msg = switch (estado) {
             case EN_PREPARACION -> "En preparacion — " + labelPedido(pedido);
@@ -224,6 +276,11 @@ public class ApiController {
     public ResponseEntity<List<Pedido>> pedidosActivos() {
         return ResponseEntity.ok(pedidoService.obtenerPedidosActivos());
     }
+
+    @GetMapping("/pedidos/cocina")
+    public ResponseEntity<List<Pedido>> pedidosCocina() {
+        return ResponseEntity.ok(pedidoService.obtenerPedidosCocina());
+    }
  
     @GetMapping("/pedidos/{id}")
     public ResponseEntity<Pedido> obtenerPedido(@PathVariable Long id) {
@@ -239,13 +296,15 @@ public class ApiController {
         return ResponseEntity.ok(pedido);
     }
  
-    // Menu diario 
  
     @PostMapping("/menu-diario")
     @Transactional
     public ResponseEntity<?> actualizarMenuDiario(@RequestBody List<MenuDiarioItemDTO> items) {
         platoDao.marcarTodosComoNoDisponibles();
-        if (items != null) items.forEach(item -> platoDao.findById(item.getId()).ifPresent(p -> {
+        int[] publicados = {0};
+        if (items != null) items.forEach(item -> platoDao.findById(item.getId())
+            .filter(p -> !Boolean.TRUE.equals(p.getArchivado())).ifPresent(p -> {
+            publicados[0]++;
             p.setDisponible(true);
             p.setStockDisponible(item.getCantidad());
             platoDao.save(p);
@@ -254,10 +313,11 @@ public class ApiController {
         }));
         messagingTemplate.convertAndSend("/topic/menu",
             NotificacionWsDTO.builder().tipo("ACTUALIZACION_MENU").mensaje("Menu del dia actualizado").build());
+        auditoria.registrar(AccionAuditoria.MENU_PUBLICADO, "Menu", null,
+            publicados[0] + (publicados[0] == 1 ? " producto disponible" : " productos disponibles"));
         return ResponseEntity.ok(Collections.singletonMap("status", "Menu actualizado"));
     }
  
-    // Reportes
  
     @GetMapping("/reportes/diarios")
     public ResponseEntity<List<ReporteDiarioDTO>> getReportesDiarios() {
@@ -270,19 +330,19 @@ public class ApiController {
                 List<Pedido> dias = entry.getValue();
                 double total = dias.stream().mapToDouble(p -> p.getDetalles().stream().mapToDouble(DetallePedido::getSubtotal).sum()).sum();
                 Map<String,int[]> itemMap = new HashMap<>();
-                Map<String,double[]> precioMap = new HashMap<>();
+                Map<String,double[]> subtotalMap = new HashMap<>();
                 dias.forEach(p -> p.getDetalles().forEach(d -> {
                     String key = d.getPresentacion() != null
                         ? d.getPlato().getNombre() + " (" + d.getPresentacion().getNombre() + ")"
                         : d.getPlato().getNombre();
                     itemMap.computeIfAbsent(key, k -> new int[]{0})[0] += d.getCantidad();
-                    precioMap.put(key, new double[]{d.getPrecioUnitario()});
+                    subtotalMap.computeIfAbsent(key, k -> new double[]{0})[0] += d.getSubtotal();
                 }));
                 List<ReporteDiarioDTO.ItemReporteDTO> items = new ArrayList<>();
                 itemMap.forEach((nombre, qtys) -> {
-                    double precio = precioMap.getOrDefault(nombre, new double[]{0})[0];
+                    double subtotal = subtotalMap.getOrDefault(nombre, new double[]{0})[0];
                     ReporteDiarioDTO.ItemReporteDTO item = new ReporteDiarioDTO.ItemReporteDTO();
-                    item.setNombre(nombre); item.setCantidad(qtys[0]); item.setSubtotal(precio * qtys[0]);
+                    item.setNombre(nombre); item.setCantidad(qtys[0]); item.setSubtotal(subtotal);
                     items.add(item);
                 });
                 items.sort((a,b) -> b.getCantidad() - a.getCantidad());
@@ -294,10 +354,37 @@ public class ApiController {
         return ResponseEntity.ok(reportes);
     }
  
-    // Helpers 
  
+    private String describirPlato(Plato p) {
+        StringBuilder texto = new StringBuilder(String.valueOf(p.getNombre()));
+        if (p.getCategoria() != null && !p.getCategoria().isBlank()) texto.append(" · ").append(p.getCategoria());
+        if (p.getPrecio() != null) texto.append(" · ").append(dinero(p.getPrecio()));
+        if (p.getStockDisponible() != null) texto.append(" · Stock ").append(p.getStockDisponible());
+        return texto.toString();
+    }
+
+    private String descripcionValida(String descripcion) {
+        if (descripcion == null || descripcion.isBlank()) return null;
+        String limpia = descripcion.trim();
+        if (limpia.length() > 200) throw new IllegalArgumentException("La descripción no puede superar 200 caracteres");
+        return limpia;
+    }
+
+    private String describirPresentacion(PresentacionPlato p) {
+        String plato = p.getPlato() != null ? p.getPlato().getNombre() + " – " : "";
+        return plato + p.getNombre() + (p.getPrecio() != null ? " · " + dinero(p.getPrecio()) : "")
+            + (p.getModalidad() != null ? " · " + p.getModalidad() : "");
+    }
+
+    private String dinero(Double monto) {
+        return configuracionNegocioService.vista().getSimboloMoneda() + " "
+            + String.format(java.util.Locale.ROOT, "%.2f", monto == null ? 0.0 : monto);
+    }
+
     private String labelPedido(Pedido p) {
-        return p.getNumeroMesa() != null ? "Mesa " + p.getNumeroMesa() : p.getNombreCliente();
+        return p.getNumeroMesa() != null
+            ? configuracionNegocioService.vista().getPuntoAtencionSingular() + " " + p.getNumeroMesa()
+            : p.getNombreCliente();
     }
  
     private void aplicarDescuentoStock(Map<Long,Integer> descPlato, Map<Long,Integer> descPres, Map<Long,Integer> descSopa) {
@@ -307,7 +394,7 @@ public class ApiController {
                 if (p.getStockDisponible() != null) {
                     int filasAfectadas = platoDao.descontarStockPreciso(pid, q);
                     if (filasAfectadas == 0) {
-                        throw new RuntimeException("Stock insuficiente para el plato: " + p.getNombre());
+                        throw new IllegalStateException("Stock insuficiente para el plato: " + p.getNombre());
                     }
                     int nuevoStock = p.getStockDisponible() - q;
                     messagingTemplate.convertAndSend("/topic/stock", StockUpdateDTO.builder().platoId(p.getId()).stockRestante(nuevoStock).nombrePlato(p.getNombre()).build());
@@ -320,10 +407,10 @@ public class ApiController {
                 if (pres.getStockDisponible() != null) {
                     int filasAfectadas = presentacionPlatoDao.descontarStockPreciso(presId, q);
                     if (filasAfectadas == 0) {
-                        throw new RuntimeException("Stock insuficiente para el tamaño: " + pres.getNombre() + " de " + pres.getPlato().getNombre());
+                        throw new IllegalStateException("Stock insuficiente para el tamaño: " + pres.getNombre() + " de " + pres.getPlato().getNombre());
                     }
                     int nuevoStock = pres.getStockDisponible() - q;
-                    messagingTemplate.convertAndSend("/topic/stock", StockUpdateDTO.builder().platoId(pres.getPlato().getId()).stockRestante(nuevoStock).nombrePlato(pres.getPlato().getNombre() + " – " + pres.getNombre()).build());
+                    messagingTemplate.convertAndSend("/topic/stock", StockUpdateDTO.builder().platoId(pres.getPlato().getId()).presentacionId(pres.getId()).stockRestante(nuevoStock).nombrePlato(pres.getPlato().getNombre() + " – " + pres.getNombre()).build());
                 }
             });
         });
@@ -333,7 +420,7 @@ public class ApiController {
                 if (s.getStockDisponible() != null) {
                     int filasAfectadas = platoDao.descontarStockPreciso(sid, q);
                     if (filasAfectadas == 0) {
-                        throw new RuntimeException("Stock insuficiente de la sopa: " + s.getNombre());
+                        throw new IllegalStateException("Stock insuficiente de la sopa: " + s.getNombre());
                     }
                     int nuevoStock = s.getStockDisponible() - q;
                     messagingTemplate.convertAndSend("/topic/stock", StockUpdateDTO.builder().platoId(s.getId()).stockRestante(nuevoStock).nombrePlato(s.getNombre()).build());

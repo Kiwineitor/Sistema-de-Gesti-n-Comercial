@@ -1,5 +1,7 @@
 package com.sistema.pedidosCori.models.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -41,4 +43,7 @@ public class Usuario {
     @Column(nullable = false)
     @Builder.Default
     private Boolean activo = true;
+
+    @Column(name = "ultimo_acceso")
+    private LocalDateTime ultimoAcceso;
 }

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="|Categorías — ${negocio.nombreNegocio}|">Categorías</title>
+  <th:block th:replace="~{fragments/head :: branding}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+  <link rel="stylesheet" th:href="@{/css/admin-categorias.css}">
+  <script defer th:src="@{/js/security.js}"></script>
+  <script defer th:src="@{/js/borradores.js}"></script>
+  <script defer th:src="@{/js/admin-shell.js}"></script>
+  <script defer th:src="@{/js/admin-categorias.js}"></script>
+</head>
+<body class="admin-shell">
+  <div th:replace="~{fragments/admin-layout :: barra('categorias')}"></div>
+  <main class="admin-main" id="contenido" tabindex="-1">
+    <header class="admin-page-head">
+      <div>
+        <h1>Categorías</h1>
+        <p class="admin-page-desc">Las categorías ordenan tu menú (por ejemplo: Sopas, Bebidas, Postres). Tu personal las ve como pestañas al tomar pedidos, en este mismo orden.</p>
+      </div>
+      <div class="admin-page-actions">
+        <button type="button" class="button-primary" id="cat-agregar">
+          <span aria-hidden="true">＋</span>
+          Nueva categoría
+        </button>
+      </div>
+    </header>
+
+    <section class="admin-card cat-lista-card" aria-labelledby="cat-lista-titulo">
+      <div class="admin-card-head cat-lista-head">
+        <h2 id="cat-lista-titulo">Tus categorías</h2>
+        <span class="cat-orden-estado" id="cat-orden-estado" role="status" aria-live="polite"></span>
+      </div>
+      <div class="admin-card-body">
+        <p class="admin-help cat-lista-ayuda">Para cambiar el orden usa los botones <strong>Subir</strong> y <strong>Bajar</strong>, o arrastra desde <span aria-hidden="true">⠿</span> la manija. El orden se guarda solo.</p>
+        <div id="cat-contenido"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="dialog-ui cat-dialog" id="cat-dialogo" aria-labelledby="cat-dialogo-titulo"></dialog>
+
+  <template id="cat-tpl-form">
+    <form class="cat-form" novalidate>
+      <div class="cat-dialog-head">
+        <h2 id="cat-dialogo-titulo">Nueva categoría</h2>
+        <button type="button" class="cat-cerrar flat" data-cerrar aria-label="Cerrar">✕</button>
+      </div>
+      <div class="cat-dialog-body" data-cuerpo>
+        <p class="cat-dialog-intro" data-intro>Una categoría agrupa productos parecidos. Tu personal la verá como una pestaña al tomar pedidos.</p>
+
+        <div class="cat-preview" aria-live="polite">
+          <span class="cat-preview-titulo">Así se verá la pestaña</span>
+          <div class="cat-preview-barra">
+            <span class="cat-preview-tab cat-preview-tab-otra" aria-hidden="true">…</span>
+            <span class="cat-preview-tab">
+              <span class="cat-preview-icono" data-preview-icono>🍽️</span>
+              <span class="cat-preview-nombre" data-preview-nombre>Nombre</span>
+            </span>
+            <span class="cat-preview-tab cat-preview-tab-otra" aria-hidden="true">…</span>
+          </div>
+          <span class="cat-preview-oculta" data-preview-oculta hidden>Oculta: tu personal no verá esta pestaña.</span>
+        </div>
+
+        <label class="admin-field">
+          <span>Nombre</span>
+          <input type="text" class="field" name="nombre" maxlength="40" autocomplete="off" required>
+          <small class="admin-help">Corto y claro. Por ejemplo: Sopas, Bebidas calientes, Postres.</small>
+          <small class="admin-error" data-error="nombre"></small>
+        </label>
+
+        <div class="admin-field">
+          <label for="cat-icono">Ícono</label>
+          <p class="admin-help">Toca un dibujo de la lista o escribe (o pega) cualquier emoji en el recuadro.</p>
+          <div class="cat-icono-fila">
+            <input type="text" class="field cat-icono-input" id="cat-icono" name="icono" maxlength="16" autocomplete="off" spellcheck="false" required>
+            <span class="cat-icono-grande" data-icono-grande aria-hidden="true"></span>
+          </div>
+          <small class="admin-error" data-error="icono"></small>
+          <div class="cat-emojis" data-emojis></div>
+        </div>
+
+        <div class="admin-field">
+          <label class="cat-switch">
+            <input type="checkbox" name="activa" role="switch">
+            <span class="cat-switch-pista" aria-hidden="true"></span>
+            <span>Visible para el personal</span>
+          </label>
+          <small class="admin-help">Si la ocultas, tu personal no verá esta pestaña ni sus productos al tomar pedidos. Nada se borra.</small>
+        </div>
+
+        <fieldset class="cat-opciones">
+          <legend>Acompañamientos <span class="cat-opcional">(opcional)</span></legend>
+          <p class="admin-help">Marca una sola opción, o ninguna si no aplica a tu negocio.</p>
+          <label class="cat-opcion">
+            <input type="checkbox" name="llevaAcompanamiento" class="visually-hidden">
+            <span class="cat-opcion-card">
+              <span class="cat-opcion-marca" aria-hidden="true"></span>
+              <span class="cat-opcion-texto">
+                <strong>Sus productos pueden llevar un acompañamiento</strong>
+                <small>Al pedir uno, tu personal podrá elegir un acompañamiento, como una sopa con el segundo.</small>
+              </span>
+            </span>
+          </label>
+          <label class="cat-opcion">
+            <input type="checkbox" name="esAcompanamiento" class="visually-hidden">
+            <span class="cat-opcion-card">
+              <span class="cat-opcion-marca" aria-hidden="true"></span>
+              <span class="cat-opcion-texto">
+                <strong>Sus productos sirven como acompañamiento</strong>
+                <small>Aparecerán como opción de acompañamiento.</small>
+              </span>
+            </span>
+          </label>
+          <small class="admin-help" data-nota-exclusiva hidden>Solo puede estar marcada una de las dos opciones; desmarcamos la otra.</small>
+        </fieldset>
+
+        <div class="admin-field">
+          <label for="cat-cantidad">Porciones sugeridas al activar un producto</label>
+          <p class="admin-help">Cuando pongas a la venta un producto de esta categoría en «Menú de hoy», empezará con esta cantidad. Luego puedes cambiarla.</p>
+          <div class="cat-cantidad-fila">
+            <input type="number" class="field cat-cantidad-input" id="cat-cantidad" name="cantidadSugerida" min="0" max="999" step="1" inputmode="numeric">
+            <label class="cat-check">
+              <input type="checkbox" name="sinLimite">
+              <span>Sin límite</span>
+            </label>
+          </div>
+          <small class="admin-help">«Sin límite» sirve para cosas que no se acaban, como bebidas embotelladas.</small>
+          <small class="admin-error" data-error="cantidadSugerida"></small>
+        </div>
+
+        <p class="admin-error" data-error="general" role="alert"></p>
+      </div>
+      <div class="cat-dialog-foot">
+        <button type="button" class="button-secondary" data-cerrar>Cancelar</button>
+        <button type="submit" class="button-primary" data-guardar>Guardar</button>
+      </div>
+    </form>
+  </template>
+
+  <template id="cat-tpl-borrar">
+    <form class="cat-form" novalidate>
+      <div class="cat-dialog-head">
+        <h2 id="cat-dialogo-titulo" data-titulo>Eliminar categoría</h2>
+        <button type="button" class="cat-cerrar flat" data-cerrar aria-label="Cerrar">✕</button>
+      </div>
+      <div class="cat-dialog-body">
+        <p class="cat-dialog-intro" data-intro></p>
+        <label class="admin-field" data-mover>
+          <span>Mover sus productos a</span>
+          <select class="field" name="moverA" required></select>
+          <small class="admin-help">Los productos no se borran: solo cambian de categoría. Después puedes moverlos uno por uno desde «Productos».</small>
+        </label>
+        <p class="admin-error" data-error="general" role="alert"></p>
+      </div>
+      <div class="cat-dialog-foot">
+        <button type="button" class="button-secondary" data-cerrar>Cancelar</button>
+        <button type="submit" class="button-danger" data-guardar>Mover y eliminar</button>
+      </div>
+    </form>
+  </template>
+</body>
+</html>

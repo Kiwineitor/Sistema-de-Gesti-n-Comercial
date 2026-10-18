@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"><head>
+<th:block th:fragment="branding">
+    <meta name="color-scheme" content="light dark">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <meta name="sesion-usuario" th:if="${sesionUsuario != null}" th:content="${sesionUsuario}">
+    <script>(function(){var p;try{p=localStorage.getItem('tema');}catch(e){}var o=p==='oscuro'||(p!=='claro'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',o?'dark':'light');})();</script>
+    <link rel="icon" th:href="${negocio.logoUrl}" th:type="${negocio.logoMimeType ?: 'image/svg+xml'}">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <style th:utext="${temaCss}"></style>
+    <script th:inline="javascript">window.NEGOCIO = /*[[${negocio}]]*/ {};</script>
+    <script defer th:src="@{/js/branding.js}"></script>
+    <script defer th:src="@{/js/tema.js}"></script>
+    <script defer th:src="@{/js/sesion.js}"></script>
+    <script defer th:src="@{/js/scroll-pistas.js}"></script>
+</th:block>
+</head></html>

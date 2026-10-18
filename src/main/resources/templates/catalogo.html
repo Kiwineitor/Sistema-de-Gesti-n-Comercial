@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title th:text="|${negocio.nombreNegocio} — Catálogo|">Catálogo</title>
+    <th:block th:replace="~{fragments/head :: branding}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/catalogo.css}">
+</head>
+<body class="ctl-pagina" th:attr="data-rol=${sesionRol}">
+    <header class="ctl-barra" id="barra">
+        <a class="ctl-volver" th:href="${sesionRol == 'ADMIN'} ? @{/admin} : @{/mesero}" href="/mesero">
+            <span class="ctl-volver-flecha" aria-hidden="true">‹</span>
+            <span class="ctl-volver-texto">Volver</span>
+        </a>
+        <h1 class="ctl-barra-titulo">Catálogo</h1>
+        <label class="ctl-interruptor" th:if="${sesionRol == 'ADMIN'}">
+            <input type="checkbox" id="soloHoy" checked>
+            <span class="ctl-interruptor-pista" aria-hidden="true"></span>
+            <span>Solo lo de hoy</span>
+        </label>
+        <div class="ctl-barra-acciones">
+            <button type="button" class="ctl-btn-barra" id="btnPantalla" aria-label="Pantalla completa">
+                <span class="ctl-btn-icono" aria-hidden="true">⛶</span>
+                <span class="ctl-btn-texto">Pantalla completa</span>
+            </button>
+            <div th:replace="~{fragments/sesion :: barra}"></div>
+        </div>
+    </header>
+    <button type="button" class="ctl-salir-fs" id="btnSalirPantalla" hidden>
+        <span aria-hidden="true">✕</span> Salir
+    </button>
+    <main id="catalogoContenido" aria-label="Productos"></main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script th:src="@{/js/security.js}" src="/js/security.js"></script>
+    <script th:src="@{/js/catalogo.js}" src="/js/catalogo.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        const contenido = document.getElementById('catalogoContenido');
+        const esAdmin = document.body.dataset.rol === 'ADMIN';
+        const soloHoy = document.getElementById('soloHoy');
+        const btnPantalla = document.getElementById('btnPantalla');
+        const btnSalir = document.getElementById('btnSalirPantalla');
+        let vista = null;
+        let cargando = null;
+        let ultimaCarga = 0;
+        let recargaPendiente = 0;
+
+        function urlPlatos() {
+            return esAdmin && soloHoy && !soloHoy.checked ? '/api/platos/todos' : '/api/platos';
+        }
+
+        async function pedir(url) {
+            const r = await secureFetch(url);
+            if (r.status === 401 || r.redirected && r.url.includes('/login')) {
+                window.location.href = '/login';
+                throw new Error('Sesión expirada');
+            }
+            if (!r.ok) throw await apiError(r);
+            return r.json();
+        }
+
+        function mostrarError(error) {
+            if (vista) { vista.destruir(); vista = null; }
+            const caja = document.createElement('div');
+            caja.className = 'ctl-estado-pagina';
+            caja.setAttribute('role', 'alert');
+            const icono = document.createElement('span');
+            icono.className = 'ctl-estado-pagina-icono';
+            icono.setAttribute('aria-hidden', 'true');
+            icono.textContent = '!';
+            const titulo = document.createElement('h2');
+            titulo.textContent = 'No pudimos cargar el catálogo';
+            const detalle = document.createElement('p');
+            detalle.textContent = navigator.onLine === false
+                ? 'Parece que no hay conexión a internet.'
+                : (error && error.message ? error.message : 'Ocurrió un error inesperado.');
+            const reintentar = document.createElement('button');
+            reintentar.type = 'button';
+            reintentar.className = 'button-primary';
+            reintentar.textContent = 'Reintentar';
+            reintentar.addEventListener('click', () => cargar(true));
+            caja.append(icono, titulo, detalle, reintentar);
+            contenido.replaceChildren(caja);
+            reintentar.focus();
+        }
+
+        function cargar(conEsqueleto) {
+            if (cargando) return cargando;
+            if (conEsqueleto || !vista) {
+                if (vista) { vista.destruir(); vista = null; }
+                Catalogo.esqueleto(contenido);
+            }
+            cargando = Promise.all([pedir(urlPlatos()), pedir('/api/categorias')])
+                .then(([platos, categorias]) => {
+                    ultimaCarga = Date.now();
+                    if (vista) {
+                        vista.actualizar({ platos, categorias });
+                    } else {
+                        contenido.replaceChildren();
+                        vista = Catalogo.montar(contenido, { platos, categorias, modo: 'pagina' });
+                    }
+                })
+                .catch(error => {
+                    if (vista) showNotice('No se pudo actualizar el catálogo. Se muestran los últimos datos.');
+                    else mostrarError(error);
+                })
+                .finally(() => { cargando = null; });
+            return cargando;
+        }
+
+        function programarRecarga() {
+            clearTimeout(recargaPendiente);
+            recargaPendiente = setTimeout(() => cargar(false), 400);
+        }
+
+        if (soloHoy) soloHoy.addEventListener('change', () => cargar(true));
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && Date.now() - ultimaCarga > 10000) cargar(false);
+        });
+        window.addEventListener('online', () => cargar(!vista));
+
+        let intento = 0;
+        let conectadoAntes = false;
+        function conectar() {
+            if (typeof SockJS === 'undefined' || typeof Stomp === 'undefined') return;
+            let cliente;
+            try {
+                cliente = Stomp.over(new SockJS('/ws'));
+                cliente.debug = null;
+            } catch (e) { reconectar(); return; }
+            let caido = false;
+            const alCaer = () => { if (caido) return; caido = true; reconectar(); };
+            cliente.connect({}, () => {
+                intento = 0;
+                if (conectadoAntes) cargar(false);
+                conectadoAntes = true;
+                cliente.subscribe('/topic/stock', msg => {
+                    try { if (vista) vista.actualizarStock(JSON.parse(msg.body)); } catch (e) { programarRecarga(); }
+                });
+                cliente.subscribe('/topic/menu', msg => {
+                    let datos = null;
+                    try { datos = JSON.parse(msg.body); } catch (e) { datos = null; }
+                    if (!datos || datos.tipo === 'ACTUALIZACION_MENU') programarRecarga();
+                });
+            }, alCaer);
+        }
+        function reconectar() {
+            const espera = Math.min(30000, 1000 * Math.pow(2, intento)) + Math.floor(Math.random() * 500);
+            intento++;
+            setTimeout(conectar, espera);
+        }
+
+        let pseudoPantalla = false;
+        function enPantallaCompleta() {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement) || pseudoPantalla;
+        }
+        function sincronizarPantalla() {
+            const activa = enPantallaCompleta();
+            document.body.classList.toggle('ctl-pantalla-completa', activa);
+            btnSalir.hidden = !activa;
+        }
+        async function entrarPantalla() {
+            const raiz = document.documentElement;
+            const pedirFs = raiz.requestFullscreen || raiz.webkitRequestFullscreen;
+            if (pedirFs && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
+                try { await pedirFs.call(raiz); return; } catch (e) { pseudoPantalla = false; }
+            }
+            pseudoPantalla = true;
+            sincronizarPantalla();
+        }
+        async function salirPantalla() {
+            if (pseudoPantalla) { pseudoPantalla = false; sincronizarPantalla(); }
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                const salir = document.exitFullscreen || document.webkitExitFullscreen;
+                try { await salir.call(document); } catch (e) { sincronizarPantalla(); }
+            }
+            btnPantalla.focus();
+        }
+        btnPantalla.addEventListener('click', entrarPantalla);
+        btnSalir.addEventListener('click', salirPantalla);
+        document.addEventListener('fullscreenchange', sincronizarPantalla);
+        document.addEventListener('webkitfullscreenchange', sincronizarPantalla);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && pseudoPantalla && !e.defaultPrevented) salirPantalla();
+        });
+
+        cargar(true);
+        conectar();
+    })();
+    </script>
+</body>
+</html>

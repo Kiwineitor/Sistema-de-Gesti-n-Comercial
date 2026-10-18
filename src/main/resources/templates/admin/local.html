@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="|Mi local — ${negocio.nombreNegocio}|">Mi local</title>
+  <th:block th:replace="~{fragments/head :: branding}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+  <script defer th:src="@{/js/security.js}"></script>
+  <script defer th:src="@{/js/borradores.js}"></script>
+  <script defer th:src="@{/js/admin-shell.js}"></script>
+  <script defer th:src="@{/js/admin-local.js}"></script>
+</head>
+<body class="admin-shell">
+  <div th:replace="~{fragments/admin-layout :: barra('local')}"></div>
+  <main class="admin-main" id="contenido" tabindex="-1">
+    <header class="admin-page-head">
+      <div>
+        <h1>Mi local</h1>
+        <p class="admin-page-desc">Cuéntale al sistema cómo funciona tu local: cuántas mesas tienes, cómo las llamas y qué moneda usas. Tu personal verá estos nombres en sus pantallas.</p>
+      </div>
+    </header>
+
+    <form id="form-local" class="local-form" novalidate>
+      <section class="admin-card" aria-labelledby="titulo-mesas">
+        <div class="admin-card-head">
+          <h2 id="titulo-mesas">¿Cuántas mesas tienes?</h2>
+          <p>Tu personal elegirá una de ellas al tomar un pedido.</p>
+        </div>
+        <div class="admin-card-body local-mesas">
+          <div class="admin-field">
+            <label for="cantidadPuntosAtencion">Cantidad</label>
+            <div class="local-stepper">
+              <button type="button" class="local-stepper-btn button-secondary" data-paso="-1" aria-label="Quitar una">−</button>
+              <input class="field local-stepper-num" id="cantidadPuntosAtencion" name="cantidadPuntosAtencion" type="number" inputmode="numeric" min="0" max="200" step="1" required aria-describedby="ayuda-cantidad error-cantidadPuntosAtencion" th:value="${negocio.cantidadPuntosAtencion}">
+              <button type="button" class="local-stepper-btn button-secondary" data-paso="1" aria-label="Agregar una">+</button>
+            </div>
+            <p class="admin-help" id="ayuda-cantidad">Pon 0 si solo vendes para llevar. Máximo 200.</p>
+            <p class="admin-error" id="error-cantidadPuntosAtencion" aria-live="polite"></p>
+          </div>
+          <div class="admin-ejemplo" aria-live="polite">
+            <span class="admin-ejemplo-titulo">Así lo verá tu personal</span>
+            <div class="local-mesas-grid" id="vista-mesas"></div>
+            <p class="local-mesas-nota" id="vista-mesas-nota"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card" aria-labelledby="titulo-nombres">
+        <div class="admin-card-head">
+          <h2 id="titulo-nombres">¿Cómo llamas a tus mesas?</h2>
+          <p>Ej.: Mesa, Mostrador, Cabina. Escribe el nombre para una y para varias.</p>
+        </div>
+        <div class="admin-card-body">
+          <div class="admin-form-grid">
+            <div class="admin-field">
+              <label for="puntoAtencionSingular">Para una</label>
+              <input class="field" id="puntoAtencionSingular" name="puntoAtencionSingular" maxlength="40" required placeholder="Mesa" aria-describedby="error-puntoAtencionSingular" th:value="${negocio.puntoAtencionSingular}">
+              <p class="admin-help">Ej.: «Mesa 3».</p>
+              <p class="admin-error" id="error-puntoAtencionSingular" aria-live="polite"></p>
+            </div>
+            <div class="admin-field">
+              <label for="puntoAtencionPlural">Para varias</label>
+              <input class="field" id="puntoAtencionPlural" name="puntoAtencionPlural" maxlength="40" required placeholder="Mesas" aria-describedby="error-puntoAtencionPlural" th:value="${negocio.puntoAtencionPlural}">
+              <p class="admin-help">Ej.: «Tienes 12 mesas».</p>
+              <p class="admin-error" id="error-puntoAtencionPlural" aria-live="polite"></p>
+            </div>
+            <div class="admin-field admin-campo-ancho">
+              <label for="etiquetaParaLlevar">Pedidos que no se comen en el local</label>
+              <input class="field" id="etiquetaParaLlevar" name="etiquetaParaLlevar" maxlength="40" required placeholder="Para llevar" aria-describedby="error-etiquetaParaLlevar" th:value="${negocio.etiquetaParaLlevar}">
+              <p class="admin-help">Ej.: Para llevar, Delivery, Retiro.</p>
+              <p class="admin-error" id="error-etiquetaParaLlevar" aria-live="polite"></p>
+            </div>
+          </div>
+          <div class="admin-ejemplo local-ejemplo-texto">
+            <span class="admin-ejemplo-titulo">Ejemplo</span>
+            <span>Pedido de la <strong class="admin-resaltado" id="ej-singular"></strong> 3 · Tienes <span id="ej-cantidad"></span> <strong class="admin-resaltado" id="ej-plural"></strong> · Pedido <strong class="admin-resaltado" id="ej-llevar"></strong></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card" aria-labelledby="titulo-vistas">
+        <div class="admin-card-head">
+          <h2 id="titulo-vistas">Cómo se llaman las vistas de tu personal</h2>
+          <p>Son las pantallas que usan quienes atienden y quienes preparan los pedidos.</p>
+        </div>
+        <div class="admin-card-body">
+          <div class="admin-form-grid">
+            <div class="admin-field">
+              <label for="etiquetaRolMesero">Quien atiende y cobra</label>
+              <input class="field" id="etiquetaRolMesero" name="etiquetaRolMesero" maxlength="40" required placeholder="Mesero" aria-describedby="error-etiquetaRolMesero" th:value="${negocio.etiquetaRolMesero}">
+              <p class="admin-help">Ej.: Mesero, Cajero, Vendedor.</p>
+              <p class="admin-error" id="error-etiquetaRolMesero" aria-live="polite"></p>
+            </div>
+            <div class="admin-field">
+              <label for="etiquetaRolCocina">Quien prepara</label>
+              <input class="field" id="etiquetaRolCocina" name="etiquetaRolCocina" maxlength="40" required placeholder="Cocina" aria-describedby="error-etiquetaRolCocina" th:value="${negocio.etiquetaRolCocina}">
+              <p class="admin-help">Ej.: Cocina, Barra, Taller.</p>
+              <p class="admin-error" id="error-etiquetaRolCocina" aria-live="polite"></p>
+            </div>
+          </div>
+          <div class="admin-ejemplo local-ejemplo-texto">
+            <span class="admin-ejemplo-titulo">Ejemplo</span>
+            <span>Vista de <strong class="admin-resaltado" id="ej-mesero"></strong>: toma pedidos y cobra. Vista de <strong class="admin-resaltado" id="ej-cocina"></strong>: prepara los pedidos.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card" aria-labelledby="titulo-moneda">
+        <div class="admin-card-head">
+          <h2 id="titulo-moneda">Moneda</h2>
+          <p>El símbolo que aparece junto a los precios.</p>
+        </div>
+        <div class="admin-card-body">
+          <div class="admin-form-grid">
+            <div class="admin-field">
+              <label for="simboloMoneda">Símbolo de moneda</label>
+              <input class="field" id="simboloMoneda" name="simboloMoneda" maxlength="12" required placeholder="Bs" aria-describedby="error-simboloMoneda" th:value="${negocio.simboloMoneda}">
+              <p class="admin-help">Ej.: Bs, $, S/, €.</p>
+              <p class="admin-error" id="error-simboloMoneda" aria-live="polite"></p>
+            </div>
+            <div class="admin-ejemplo">
+              <span class="admin-ejemplo-titulo">Así se verá un precio</span>
+              <strong class="local-precio" id="ej-precio"></strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="admin-actionbar">
+        <span class="admin-actionbar-estado" id="local-estado" aria-live="polite">Todo está guardado.</span>
+        <div class="admin-actionbar-botones">
+          <button type="button" class="button-secondary" id="local-deshacer" disabled>Deshacer cambios</button>
+          <button type="submit" class="button-primary" id="local-guardar">Guardar cambios</button>
+        </div>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

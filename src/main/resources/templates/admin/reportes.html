@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="|Reportes — ${negocio.nombreNegocio}|">Reportes</title>
+  <th:block th:replace="~{fragments/head :: branding}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+  <link rel="stylesheet" th:href="@{/css/admin-reportes.css}">
+  <script defer th:src="@{/js/security.js}"></script>
+  <script defer th:src="@{/js/borradores.js}"></script>
+  <script defer th:src="@{/js/admin-shell.js}"></script>
+  <script defer th:src="@{/js/admin-reportes.js}"></script>
+</head>
+<body class="admin-shell">
+  <div th:replace="~{fragments/admin-layout :: barra('reportes')}"></div>
+  <main class="admin-main" id="contenido" tabindex="-1">
+    <header class="admin-page-head">
+      <div>
+        <h1>Reportes</h1>
+        <p class="admin-page-desc">Mira cómo le va a tu negocio: cuánto vendiste, qué se vende más, en qué horarios y quién de tu equipo atiende más.</p>
+      </div>
+      <div class="admin-page-actions">
+        <button type="button" class="button-secondary" id="rep-actualizar"><span aria-hidden="true">🔄</span> Actualizar</button>
+      </div>
+    </header>
+
+    <section class="admin-card rep-filtros" aria-labelledby="rep-filtros-titulo">
+      <div class="rep-filtros-cuerpo">
+        <h2 class="visually-hidden" id="rep-filtros-titulo">Elige las fechas</h2>
+        <div class="rep-chips" role="group" aria-label="Fechas del reporte">
+          <button type="button" class="rep-chip flat" data-periodo="hoy" aria-pressed="false">Hoy</button>
+          <button type="button" class="rep-chip flat" data-periodo="ayer" aria-pressed="false">Ayer</button>
+          <button type="button" class="rep-chip flat" data-periodo="esta-semana" aria-pressed="false">Esta semana</button>
+          <button type="button" class="rep-chip flat" data-periodo="semana-pasada" aria-pressed="false">Semana pasada</button>
+          <button type="button" class="rep-chip flat" data-periodo="este-mes" aria-pressed="false">Este mes</button>
+          <button type="button" class="rep-chip flat" data-periodo="mes-pasado" aria-pressed="false">Mes pasado</button>
+          <button type="button" class="rep-chip flat" data-periodo="ultimos-7" aria-pressed="false">Últimos 7 días</button>
+          <button type="button" class="rep-chip flat" data-periodo="ultimos-30" aria-pressed="false">Últimos 30 días</button>
+          <button type="button" class="rep-chip flat" id="rep-chip-personalizado" data-periodo="personalizado" aria-pressed="false" aria-expanded="false" aria-controls="rep-personalizado">Personalizado</button>
+        </div>
+        <form class="rep-personalizado" id="rep-personalizado" novalidate hidden>
+          <label class="admin-field">
+            <span>Desde</span>
+            <input type="date" class="field" id="rep-desde" name="desde" aria-describedby="rep-error-rango">
+          </label>
+          <label class="admin-field">
+            <span>Hasta</span>
+            <input type="date" class="field" id="rep-hasta" name="hasta" aria-describedby="rep-error-rango">
+          </label>
+          <button type="submit" class="button-primary">Aplicar</button>
+          <p class="admin-error rep-error-rango" id="rep-error-rango" role="alert"></p>
+        </form>
+        <p class="rep-rango"><span aria-hidden="true">📅</span> <strong id="rep-rango-texto" aria-live="polite"></strong></p>
+      </div>
+    </section>
+
+    <div id="rep-error" hidden></div>
+
+    <section aria-labelledby="rep-titulo-resumen">
+      <div class="rep-seccion-head">
+        <h2 id="rep-titulo-resumen">Resumen</h2>
+        <p class="admin-help" id="rep-comparado"></p>
+      </div>
+      <div class="admin-grid rep-kpis" id="rep-kpis"></div>
+      <p class="admin-help rep-nota">Las ventas cuentan solo los pedidos ya cobrados, según el día en que se cobraron. Lo vendido por producto, por persona y por forma de pago también se calcula sobre pedidos cobrados.</p>
+      <p class="admin-help" id="rep-actualizado" aria-live="polite"></p>
+    </section>
+
+    <section class="admin-card" aria-labelledby="rep-titulo-serie">
+      <div class="admin-card-head">
+        <h2 id="rep-titulo-serie">Ventas en el tiempo</h2>
+        <div class="rep-head-controles">
+          <label class="rep-agrupar">
+            <span>Agrupar</span>
+            <select class="field" id="rep-agrupar">
+              <option value="auto">Automático</option>
+              <option value="dia">Por día</option>
+              <option value="semana">Por semana</option>
+              <option value="mes">Por mes</option>
+            </select>
+          </label>
+          <button type="button" class="button-secondary" id="rep-ver-tabla" aria-pressed="false">Ver como tabla</button>
+        </div>
+        <p id="rep-serie-desc">Cuánto dinero cobraste en cada parte del período. Toca una barra para ver el detalle.</p>
+      </div>
+      <div class="admin-card-body" id="rep-serie"></div>
+    </section>
+
+    <div class="rep-columnas">
+      <section class="admin-card" aria-labelledby="rep-titulo-top">
+        <div class="admin-card-head">
+          <h2 id="rep-titulo-top">Lo más vendido</h2>
+          <div class="rep-segmento" role="group" aria-label="Ordenar productos">
+            <button type="button" class="flat" data-top="unidades" aria-pressed="true">Por unidades</button>
+            <button type="button" class="flat" data-top="ingresos" aria-pressed="false">Por ingresos</button>
+          </div>
+          <p>Los productos que más salieron en pedidos cobrados.</p>
+        </div>
+        <div class="admin-card-body">
+          <div id="rep-top"></div>
+          <h3 class="rep-subtitulo">Por categoría</h3>
+          <p class="admin-help rep-subayuda">Cuánto dinero dejó cada categoría y qué parte del total representa.</p>
+          <div id="rep-categorias"></div>
+        </div>
+      </section>
+
+      <div class="rep-pila">
+        <section class="admin-card" aria-labelledby="rep-titulo-pagos">
+          <div class="admin-card-head">
+            <h2 id="rep-titulo-pagos">Cómo te pagan</h2>
+            <p>Cuánto se cobró con cada forma de pago.</p>
+          </div>
+          <div class="admin-card-body" id="rep-pagos"></div>
+        </section>
+
+        <section class="admin-card" aria-labelledby="rep-titulo-modalidad">
+          <div class="admin-card-head">
+            <h2 id="rep-titulo-modalidad"><span th:text="${negocio.puntoAtencionPlural}">Mesas</span> o <span th:text="${#strings.toLowerCase(negocio.etiquetaParaLlevar)}">para llevar</span></h2>
+            <p>Cómo se reparten tus pedidos entre atención en el local y para llevar.</p>
+          </div>
+          <div class="admin-card-body" id="rep-modalidad"></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="admin-card" aria-labelledby="rep-titulo-equipo">
+      <div class="admin-card-head">
+        <h2 id="rep-titulo-equipo">Tu equipo</h2>
+        <p>Ventas, pedidos cobrados y ticket promedio: de los pedidos de cada persona que ya se pagaron. Pedidos registrados: todos los que tomó. Cobros: cuántos pagos registró.</p>
+      </div>
+      <div class="admin-card-body" id="rep-equipo"></div>
+    </section>
+
+    <section class="admin-card" aria-labelledby="rep-titulo-horarios">
+      <div class="admin-card-head">
+        <h2 id="rep-titulo-horarios">Horarios</h2>
+        <p>En qué horas y en qué días tienes más pedidos. Te ayuda a organizar a tu personal.</p>
+      </div>
+      <div class="admin-card-body">
+        <h3 class="rep-subtitulo rep-subtitulo-primero">Horas del día</h3>
+        <p class="rep-frase" id="rep-horas-frase"></p>
+        <div id="rep-horas"></div>
+        <h3 class="rep-subtitulo">Días de la semana</h3>
+        <p class="rep-frase" id="rep-dias-frase"></p>
+        <div id="rep-dias"></div>
+      </div>
+    </section>
+
+    <section class="admin-card" aria-labelledby="rep-titulo-exportar">
+      <div class="admin-card-head">
+        <h2 id="rep-titulo-exportar">Exportar</h2>
+        <p>Descarga los datos de estas fechas. Se abren en Excel.</p>
+      </div>
+      <div class="admin-card-body rep-exportar">
+        <a class="btn button-secondary" id="rep-csv-pedidos" href="#" download><span aria-hidden="true">🧾</span> Descargar pedidos (CSV)</a>
+        <a class="btn button-secondary" id="rep-csv-productos" href="#" download><span aria-hidden="true">🍽️</span> Descargar productos (CSV)</a>
+        <a class="btn button-secondary" id="rep-csv-empleados" href="#" download><span aria-hidden="true">👥</span> Descargar equipo (CSV)</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

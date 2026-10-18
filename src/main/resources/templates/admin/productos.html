@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="|Productos — ${negocio.nombreNegocio}|">Productos</title>
+  <th:block th:replace="~{fragments/head :: branding}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css}">
+  <link rel="stylesheet" th:href="@{/css/admin-productos.css}">
+  <script defer th:src="@{/js/security.js}"></script>
+  <script defer th:src="@{/js/borradores.js}"></script>
+  <script defer th:src="@{/js/admin-shell.js}"></script>
+  <script defer th:src="@{/js/admin-productos.js}"></script>
+</head>
+<body class="admin-shell">
+  <div th:replace="~{fragments/admin-layout :: barra('productos')}"></div>
+  <main class="admin-main" id="contenido" tabindex="-1">
+    <header class="admin-page-head">
+      <div>
+        <h1>Productos</h1>
+        <p class="admin-page-desc">Aquí está todo lo que vendes. Agrega fotos y descripciones para que tu personal (y tus clientes) sepan cómo es cada producto. Para elegir qué se vende hoy, usa <a class="prod-enlace" th:href="@{/admin/menu-hoy}">«Menú de hoy»</a>.</p>
+      </div>
+      <div class="admin-page-actions">
+        <button type="button" class="button-primary" id="prod-agregar">
+          <span aria-hidden="true">＋</span>
+          Agregar producto
+        </button>
+      </div>
+    </header>
+
+    <section class="prod-toolbar" aria-label="Buscar y filtrar productos">
+      <div class="admin-toolbar">
+        <label class="admin-field admin-buscar">
+          <span class="visually-hidden">Buscar producto</span>
+          <input type="search" class="field" id="prod-buscar" placeholder="🔍 Buscar por nombre o descripción" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="admin-field prod-filtro-foto">
+          <span class="visually-hidden">Filtrar por foto</span>
+          <select class="field" id="prod-filtro-foto">
+            <option value="">Con y sin foto</option>
+            <option value="con">📷 Con foto</option>
+            <option value="sin">Sin foto</option>
+          </select>
+        </label>
+      </div>
+      <div class="prod-chips" id="prod-chips" role="group" aria-label="Filtrar por categoría"></div>
+      <p class="prod-resultado" id="prod-resultado" aria-live="polite"></p>
+    </section>
+
+    <div id="prod-contenido"></div>
+  </main>
+
+  <dialog class="dialog-ui prod-dialog" id="prod-dialogo" aria-labelledby="prod-dialogo-titulo"></dialog>
+
+  <template id="prod-tpl-form">
+    <form class="prod-form" novalidate>
+      <div class="prod-dialog-head">
+        <h2 id="prod-dialogo-titulo">Agregar producto</h2>
+        <button type="button" class="prod-cerrar flat" data-cerrar aria-label="Cerrar">✕</button>
+      </div>
+      <div class="prod-dialog-body" data-cuerpo>
+        <p class="prod-dialog-intro" data-intro>Completa los datos de lo que vendes. Solo el nombre, la categoría y el precio son obligatorios.</p>
+
+        <section class="prod-bloque" aria-labelledby="prod-foto-titulo">
+          <h3 id="prod-foto-titulo">Foto</h3>
+          <div class="prod-foto-editor">
+            <div class="prod-foto-marco" data-foto-marco>
+              <img alt="" data-foto-img hidden>
+              <div class="prod-foto-vacia" data-foto-vacia>
+                <span class="prod-foto-vacia-icono" data-foto-icono aria-hidden="true">🍽️</span>
+                <span>Sin foto</span>
+              </div>
+              <div class="prod-foto-procesando" data-foto-procesando hidden>Preparando foto…</div>
+            </div>
+            <div class="prod-foto-controles">
+              <p class="admin-help">Una buena foto ayuda a tu personal a reconocer el producto. La achicamos automáticamente para que cargue rápido.</p>
+              <div class="prod-foto-botones">
+                <button type="button" class="button-secondary" data-foto-camara><span aria-hidden="true">📷</span> Tomar foto</button>
+                <button type="button" class="button-secondary" data-foto-galeria><span aria-hidden="true">🖼️</span> Elegir foto</button>
+                <button type="button" class="button-secondary prod-btn-peligro" data-foto-quitar hidden>Quitar foto</button>
+                <button type="button" class="button-secondary" data-foto-deshacer hidden>Deshacer</button>
+              </div>
+              <input type="file" accept="image/*" capture="environment" class="visually-hidden" name="archivoCamara" tabindex="-1" aria-hidden="true" data-foto-input-camara>
+              <input type="file" accept="image/*" class="visually-hidden" name="archivoGaleria" tabindex="-1" aria-hidden="true" data-foto-input-galeria>
+              <label class="prod-check">
+                <input type="checkbox" name="recortar" checked>
+                <span>Recortar al centro (formato horizontal)</span>
+              </label>
+              <p class="prod-foto-estado" data-foto-estado aria-live="polite"></p>
+              <p class="admin-error" data-error="foto"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="prod-bloque" aria-labelledby="prod-datos-titulo">
+          <h3 id="prod-datos-titulo">Datos</h3>
+          <div class="prod-campos">
+            <label class="admin-field prod-campo-ancho">
+              <span>Nombre</span>
+              <input type="text" class="field" name="nombre" maxlength="80" autocomplete="off" required>
+              <small class="admin-help">Como lo dice tu personal. Por ejemplo: Sopa de maní, Limonada.</small>
+              <small class="admin-error" data-error="nombre"></small>
+            </label>
+
+            <div class="admin-field prod-campo-ancho">
+              <label for="prod-descripcion">Descripción <span class="prod-opcional">(opcional)</span></label>
+              <textarea class="field" id="prod-descripcion" name="descripcion" maxlength="200" rows="3"></textarea>
+              <div class="prod-ayuda-fila">
+                <small class="admin-help">Cuéntale al cliente cómo es: ingredientes, si es picante, para cuántas personas…</small>
+                <small class="prod-contador" data-contador aria-live="polite">0/200</small>
+              </div>
+            </div>
+
+            <div class="admin-field">
+              <label for="prod-categoria">Categoría</label>
+              <select class="field" id="prod-categoria" name="categoria" required></select>
+              <small class="admin-help" data-ayuda-categoria>Es la pestaña donde tu personal lo encontrará.</small>
+              <small class="admin-error" data-error="categoria"></small>
+            </div>
+
+            <div class="admin-field">
+              <label for="prod-precio" data-etiqueta-precio>Precio</label>
+              <input type="number" class="field" id="prod-precio" name="precio" min="0" step="0.01" inputmode="decimal" required>
+              <small class="admin-help" data-ayuda-precio>Lo que cobras por una unidad.</small>
+              <small class="admin-error" data-error="precio"></small>
+            </div>
+
+            <div class="admin-field">
+              <label for="prod-porciones">Porciones <span class="prod-opcional">(opcional)</span></label>
+              <input type="number" class="field" id="prod-porciones" name="porciones" min="0" step="1" inputmode="numeric">
+              <small class="admin-help" data-ayuda-porciones>Cuántas tienes para vender. Déjalo vacío si no quieres llevar la cuenta. También puedes cambiarlo cada día en «Menú de hoy».</small>
+              <small class="admin-error" data-error="porciones"></small>
+            </div>
+
+            <div class="admin-field" data-solo-nuevo>
+              <span class="admin-label">¿Se vende hoy?</span>
+              <label class="prod-switch">
+                <input type="checkbox" name="venderHoy" role="switch" checked>
+                <span class="prod-switch-pista" aria-hidden="true"></span>
+                <span>Ponerlo a la venta hoy</span>
+              </label>
+              <small class="admin-help">Si lo apagas, quedará guardado y podrás activarlo otro día en «Menú de hoy».</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="prod-bloque" aria-labelledby="prod-tam-titulo">
+          <h3 id="prod-tam-titulo">Tamaños <span class="prod-opcional">(opcional)</span></h3>
+          <p class="admin-help">Úsalos si vendes lo mismo en varias medidas, por ejemplo Vaso y Jarra. Al tomar el pedido, tu personal elegirá el tamaño y se cobrará su precio.</p>
+          <div class="prod-tam-lista" data-tam-lista></div>
+          <div class="prod-tam-form" data-tam-form hidden>
+            <div class="prod-tam-campos">
+              <label class="admin-field">
+                <span>Nombre del tamaño</span>
+                <input type="text" class="field" data-tam="nombre" maxlength="40" placeholder="Ej: Vaso, Jarra, Familiar" autocomplete="off">
+              </label>
+              <label class="admin-field">
+                <span data-tam-etiqueta-precio>Precio</span>
+                <input type="number" class="field" data-tam="precio" min="0" step="0.01" inputmode="decimal">
+              </label>
+              <label class="admin-field">
+                <span>Cantidad <span class="prod-opcional">(vacío = sin límite)</span></span>
+                <input type="number" class="field" data-tam="stock" min="0" step="1" inputmode="numeric">
+              </label>
+              <label class="admin-field" data-tam-modalidad-campo>
+                <span>Se vende</span>
+                <select class="field" data-tam="modalidad"></select>
+              </label>
+            </div>
+            <div class="prod-tam-botones">
+              <button type="button" class="button-secondary" data-tam-cancelar>Cancelar</button>
+              <button type="button" class="button-primary" data-tam-agregar>Agregar tamaño</button>
+            </div>
+          </div>
+          <button type="button" class="button-secondary prod-tam-mostrar" data-tam-mostrar><span aria-hidden="true">＋</span> Agregar tamaño</button>
+        </section>
+
+        <section class="prod-bloque prod-peligro" data-solo-edicion hidden aria-labelledby="prod-borrar-titulo">
+          <h3 id="prod-borrar-titulo">Eliminar producto</h3>
+          <p class="admin-help">Si este producto ya se vendió alguna vez, no se borra del todo: se archiva para conservar tu historial de ventas y deja de aparecer en el menú.</p>
+          <button type="button" class="button-secondary prod-btn-peligro" data-eliminar>Eliminar producto</button>
+        </section>
+
+        <p class="admin-error" data-error="general" role="alert"></p>
+      </div>
+      <div class="prod-dialog-foot">
+        <button type="button" class="button-secondary" data-cerrar>Cancelar</button>
+        <button type="submit" class="button-primary" data-guardar>Guardar</button>
+      </div>
+    </form>
+  </template>
+</body>
+</html>

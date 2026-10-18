@@ -12,6 +12,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class StockUpdateDTO {
     private Long platoId;
+    private Long presentacionId;
     private Integer stockRestante;
     private String nombrePlato;
 }

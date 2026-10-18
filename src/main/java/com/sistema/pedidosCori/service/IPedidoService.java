@@ -10,7 +10,9 @@ public interface IPedidoService {
     Pedido crearPedido(PedidoRequestDTO dto);
     Pedido actualizarEstado(Long pedidoId, EstadoPedido nuevoEstado);
     Pedido registrarPago(Long id, String metodoPago);
+    Pedido agregarDetalles(Long id, List<PedidoRequestDTO.DetalleRequestDTO> detalles);
     List<Pedido> obtenerPedidosActivos();
+    List<Pedido> obtenerPedidosCocina();
     List<Pedido> obtenerPedidosPorEstado(EstadoPedido estado);
     Pedido obtenerPorId(Long id);
     List<Pedido> obtenerTodosLosPagados();
