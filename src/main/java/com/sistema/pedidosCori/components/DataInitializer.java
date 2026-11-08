@@ -2,6 +2,7 @@ package com.sistema.pedidosCori.components;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,16 +18,18 @@ import com.sistema.pedidosCori.models.entity.PresentacionPlato;
 import com.sistema.pedidosCori.models.entity.Rol;
 import com.sistema.pedidosCori.models.entity.Usuario;
 import com.sistema.pedidosCori.service.CategoriaService;
+import com.sistema.pedidosCori.service.PoliticaPassword;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.security.SecureRandom;
 import java.util.Base64;
-import java.util.Set;
+import java.util.Map;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Order(1)
 public class DataInitializer implements CommandLineRunner {
 
     private final IUsuarioDao           usuarioDao;
@@ -45,32 +48,52 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (environment.acceptsProfiles(Profiles.of("prod"))) {
-            exigirPassword("SEED_ADMIN_PASSWORD", adminPassword);
-            exigirPassword("SEED_MESERO_PASSWORD", meseroPassword);
-            exigirPassword("SEED_COCINA_PASSWORD", cocinaPassword);
-        }
+        boolean produccion = environment.acceptsProfiles(Profiles.of("prod"));
         if (usuarioDao.count() == 0) {
-            crearUsuario("admin",  adminPassword,  "Dueño",  Rol.ADMIN);
-            crearUsuario("mesero", meseroPassword, "Mesero", Rol.MESERO);
-            crearUsuario("cocina", cocinaPassword, "Cocina", Rol.COCINA);
+            if (produccion) exigirPassword("SEED_ADMIN_PASSWORD", adminPassword);
+            crearUsuario("admin", adminPassword, "Dueño", Rol.ADMIN);
+            if (!produccion || configurada(meseroPassword)) {
+                if (produccion) exigirPassword("SEED_MESERO_PASSWORD", meseroPassword);
+                crearUsuario("mesero", meseroPassword, "Mesero", Rol.MESERO);
+            }
+            if (!produccion || configurada(cocinaPassword)) {
+                if (produccion) exigirPassword("SEED_COCINA_PASSWORD", cocinaPassword);
+                crearUsuario("cocina", cocinaPassword, "Cocina", Rol.COCINA);
+            }
         } else if (usuarioDao.countByRolAndActivoTrue(Rol.ADMIN) == 0) {
             asegurarAdministrador();
         }
+        exigirCambioDeContrasenasDemo();
 
         categoriaService.inicializar();
         if (demoData && platoDao.count() == 0) cargarMenuDemo();
     }
 
-    public static final Set<String> CONTRASENAS_DEMO = Set.of("admin123", "mesero123", "cocina123");
+    private static final Map<String, String> CONTRASENAS_DEMO = Map.of(
+        "admin", "admin123", "mesero", "mesero123", "cocina", "cocina123");
+
+    private static boolean configurada(String valor) {
+        return valor != null && !valor.isBlank() && !valor.startsWith("CAMBIAR_");
+    }
 
     public static void exigirPassword(String nombre, String valor) {
-        if (valor == null || valor.isBlank() || valor.startsWith("CAMBIAR_")) {
+        if (!configurada(valor)) {
             throw new IllegalStateException("Falta configurar " + nombre + " para el perfil prod");
         }
-        if (CONTRASENAS_DEMO.contains(valor.trim().toLowerCase())) {
+        if (PoliticaPassword.esDeDemostracion(valor)) {
             throw new IllegalStateException(nombre + " usa una contraseña de demostración; define una propia para el perfil prod");
         }
+    }
+
+    private void exigirCambioDeContrasenasDemo() {
+        CONTRASENAS_DEMO.forEach((username, demo) -> usuarioDao.findByUsername(username)
+            .filter(u -> !Boolean.TRUE.equals(u.getDebeCambiarPassword()))
+            .filter(u -> passwordEncoder.matches(demo, u.getPassword()))
+            .ifPresent(u -> {
+                u.setDebeCambiarPassword(true);
+                usuarioDao.save(u);
+                log.warn("El usuario {} usa una contraseña de demostración: deberá cambiarla al ingresar", username);
+            }));
     }
 
     private void asegurarAdministrador() {
@@ -87,7 +110,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private void crearUsuario(String username, String password, String nombre, Rol rol) {
         if (usuarioDao.existsByUsername(username)) return;
-        if (password == null || password.isBlank() || password.startsWith("CAMBIAR_")) {
+        if (!configurada(password)) {
             if (!environment.acceptsProfiles(Profiles.of("dev"))) {
                 throw new IllegalStateException("Falta SEED_" + username.toUpperCase() + "_PASSWORD para crear el usuario inicial " + username);
             }
@@ -101,6 +124,7 @@ public class DataInitializer implements CommandLineRunner {
             .password(passwordEncoder.encode(password))
             .nombreCompleto(nombre)
             .rol(rol)
+            .debeCambiarPassword(true)
             .build());
         log.info("Usuario inicial creado: {} ({})", username, rol);
     }

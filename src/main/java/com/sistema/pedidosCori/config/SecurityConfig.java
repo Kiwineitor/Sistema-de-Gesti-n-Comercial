@@ -4,6 +4,7 @@ import com.sistema.pedidosCori.models.dao.IUsuarioDao;
 import com.sistema.pedidosCori.models.entity.AccionAuditoria;
 import com.sistema.pedidosCori.models.entity.RegistroAuditoria;
 import com.sistema.pedidosCori.service.AuditoriaService;
+import com.sistema.pedidosCori.service.CuentaService;
 import com.sistema.pedidosCori.service.LoginAttemptService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,13 +24,20 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 @Slf4j
 @Configuration
 @EnableScheduling
 public class SecurityConfig {
+    static final String POLITICA_CONTENIDO = "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+        + "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; "
+        + "connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'";
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
@@ -47,15 +55,16 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, LoginAttemptService attempts,
-            SessionRegistry sessionRegistry, AuditoriaService auditoria, IUsuarioDao usuarioDao) throws Exception {
+            SessionRegistry sessionRegistry, AuditoriaService auditoria, IUsuarioDao usuarioDao,
+            CuentaService cuentaService) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login", "/error", "/favicon.ico", "/css/**", "/js/**", "/img/**", "/branding/logo").permitAll()
-                .requestMatchers("/", "/logout", "/ws", "/ws/**").authenticated()
+                .requestMatchers("/login", "/terminos", "/error", "/favicon.ico", "/css/**", "/js/**", "/img/**", "/branding/logo").permitAll()
+                .requestMatchers("/", "/logout", "/cuenta", "/ws", "/ws/**").authenticated()
                 .requestMatchers("/mesero", "/catalogo").hasAnyRole("ADMIN", "MESERO")
                 .requestMatchers("/cocina").hasAnyRole("ADMIN", "COCINA")
                 .requestMatchers("/admin", "/admin/**").hasRole("ADMIN")
-                .requestMatchers("/menu", "/menu/**", "/configuracion", "/api/admin/**", "/api/reportes/**").hasRole("ADMIN")
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/platos/*/imagen").hasAnyRole("ADMIN", "MESERO", "COCINA")
                 .requestMatchers(HttpMethod.GET, "/api/platos/todos").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/platos/**", "/api/menu-diario").hasRole("ADMIN")
@@ -82,7 +91,9 @@ public class SecurityConfig {
                     }
                     auditoria.registrarComo(username, AccionAuditoria.LOGIN, "Usuario", null,
                         () -> "Acceso desde " + req.getRemoteAddr());
-                    res.sendRedirect("/");
+                    boolean pendiente = cuentaService.pendientes(username).alguno();
+                    if (pendiente) req.getSession().setAttribute(CuentaService.SESION_PENDIENTE, Boolean.TRUE);
+                    res.sendRedirect(req.getContextPath() + (pendiente ? "/cuenta" : "/"));
                 })
                 .failureHandler((req, res, exception) -> {
                     attempts.failed(req.getParameter("username"), req.getRemoteAddr());
@@ -96,7 +107,7 @@ public class SecurityConfig {
                 })
                 .permitAll()
             )
-            .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/login?logout").permitAll())
+            .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/login?logout").deleteCookies("JSESSIONID").permitAll())
             .sessionManagement(session -> session.sessionConcurrency(concurrency -> concurrency
                 .maximumSessions(-1)
                 .sessionRegistry(sessionRegistry)
@@ -108,7 +119,11 @@ public class SecurityConfig {
                     else res.sendRedirect(req.getContextPath() + "/login?expirado");
                 })))
             .csrf(csrf -> csrf.ignoringRequestMatchers("/ws/**"))
-            .headers(h -> h.frameOptions(f -> f.sameOrigin()))
+            .headers(h -> h
+                .frameOptions(f -> f.sameOrigin())
+                .contentSecurityPolicy(csp -> csp.policyDirectives(POLITICA_CONTENIDO))
+                .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN))
+                .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=()")))
             .exceptionHandling(ex -> ex
                 .defaultAuthenticationEntryPointFor(
                     (req, res, e) -> apiError(res, HttpStatus.UNAUTHORIZED, "Debes iniciar sesión", "NO_AUTENTICADO"),
@@ -120,6 +135,7 @@ public class SecurityConfig {
                 })
             );
         http.addFilterBefore(new LoginThrottleFilter(attempts), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(new CuentaPendienteFilter(), AuthorizationFilter.class);
         return http.build();
     }
 
@@ -127,7 +143,7 @@ public class SecurityConfig {
         res.sendRedirect(req.getContextPath() + (minutes > 0 ? "/login?blocked=" + minutes : "/login?error"));
     }
 
-    private static void apiError(HttpServletResponse res, HttpStatus status, String mensaje, String codigo)
+    static void apiError(HttpServletResponse res, HttpStatus status, String mensaje, String codigo)
             throws IOException {
         res.setStatus(status.value());
         res.setContentType("application/json;charset=UTF-8");

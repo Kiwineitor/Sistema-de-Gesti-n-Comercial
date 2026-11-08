@@ -245,9 +245,4 @@ public class PedidoServiceImpl implements IPedidoService{
         String simbolo = negocio != null ? negocio.getSimboloMoneda() : "Bs.";
         return simbolo + " " + String.format(Locale.ROOT, "%.2f", monto == null ? 0.0 : monto);
     }
- 
-    @Override
-    public List<Pedido> obtenerTodosLosPagados() {
-        return pedidoDao.findByPagadoTrue();
-    }
 }

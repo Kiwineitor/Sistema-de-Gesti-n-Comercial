@@ -37,14 +37,11 @@ class SecurityAuthorizationTests {
     @Test
     @WithMockUser(roles = "ADMIN")
     void adminCanOpenAllViewsAndReports() throws Exception {
-        mvc().perform(get("/menu")).andExpect(redirectedUrl("/admin/menu-hoy"));
-        mvc().perform(get("/configuracion")).andExpect(redirectedUrl("/admin/apariencia"));
         mvc().perform(get("/")).andExpect(redirectedUrl("/admin"));
+        mvc().perform(get("/admin/reportes")).andExpect(status().isOk());
         mvc().perform(get("/cocina")).andExpect(status().isOk());
         mvc().perform(get("/mesero")).andExpect(status().isOk())
-            .andExpect(content().string(containsString("id=\"s-reportes\"")))
             .andExpect(content().string(containsString("Menú, precios y configuración")));
-        mvc().perform(get("/api/reportes/diarios")).andExpect(status().isOk());
         mvc().perform(get("/api/admin/inexistente")).andExpect(status().isNotFound());
     }
 
@@ -52,12 +49,10 @@ class SecurityAuthorizationTests {
     @WithMockUser(roles = "MESERO")
     void meseroCannotOpenAdminOrKitchen() throws Exception {
         mvc().perform(get("/mesero")).andExpect(status().isOk())
-            .andExpect(content().string(not(containsString("id=\"s-reportes\""))))
             .andExpect(content().string(not(containsString("Menú, precios y configuración"))));
-        mvc().perform(get("/menu")).andExpect(redirectedUrl("/?denegado"));
+        mvc().perform(get("/admin/reportes")).andExpect(redirectedUrl("/?denegado"));
         mvc().perform(get("/cocina")).andExpect(redirectedUrl("/?denegado"));
         mvc().perform(get("/api/admin/inexistente")).andExpect(status().isForbidden());
-        mvc().perform(get("/api/reportes/diarios")).andExpect(status().isForbidden());
         mvc().perform(post("/api/platos").with(csrf())).andExpect(status().isForbidden());
         mvc().perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                 .put("/api/pedidos/1/estado").param("estado", "EN_PREPARACION").with(csrf()))
@@ -70,9 +65,8 @@ class SecurityAuthorizationTests {
     void cocinaCannotOpenAdminOrWaiter() throws Exception {
         mvc().perform(get("/cocina")).andExpect(status().isOk());
         mvc().perform(get("/mesero")).andExpect(redirectedUrl("/?denegado"));
-        mvc().perform(get("/menu")).andExpect(redirectedUrl("/?denegado"));
+        mvc().perform(get("/admin/reportes")).andExpect(redirectedUrl("/?denegado"));
         mvc().perform(get("/api/admin/inexistente")).andExpect(status().isForbidden());
-        mvc().perform(get("/api/reportes/diarios")).andExpect(status().isForbidden());
         mvc().perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                 .put("/api/pedidos/1/estado").param("estado", "ENTREGADO").with(csrf()))
             .andExpect(status().isForbidden());
@@ -88,8 +82,6 @@ class SecurityAuthorizationTests {
             .andExpect(content().string(containsString("Administrador")))
             .andExpect(content().string(not(containsString("sesion-barra"))))
             .andExpect(content().string(not(containsString("btn-logout"))));
-        mvc().perform(get("/menu")).andExpect(redirectedUrl("/admin/menu-hoy"));
-        mvc().perform(get("/configuracion")).andExpect(redirectedUrl("/admin/apariencia"));
     }
 
     @Test
@@ -121,7 +113,7 @@ class SecurityAuthorizationTests {
     @Test
     void publicLoginResourcesAreAvailable() throws Exception {
         mvc().perform(get("/login")).andExpect(status().isOk());
-        mvc().perform(get("/img/logo.png")).andExpect(status().isOk());
+        mvc().perform(get("/img/logo-default.svg")).andExpect(status().isOk());
         mvc().perform(get("/js/security.js")).andExpect(status().isOk());
     }
 
@@ -250,8 +242,6 @@ class SecurityAuthorizationTests {
                 .content("[{\"id\":" + p.getId() + ",\"cantidad\":5}]"))
             .andExpect(status().isOk());
         org.junit.jupiter.api.Assertions.assertFalse(platoDao.findById(p.getId()).orElseThrow().getDisponible());
-        client.perform(get("/api/reportes/diarios").with(user("admin").roles("ADMIN")))
-            .andExpect(content().string(containsString("Plato histórico")));
     }
 
     @Test
@@ -296,7 +286,7 @@ class SecurityAuthorizationTests {
         }
         client.perform(post("/login").with(csrf()).with(req -> { req.setRemoteAddr("192.0.2.11"); return req; })
                 .param("username", "admin").param("password", "TestAdminPassword-2026"))
-            .andExpect(redirectedUrl("/"));
+            .andExpect(redirectedUrl("/cuenta"));
         for (int i = 0; i < 4; i++) {
             client.perform(post("/login").with(csrf()).with(req -> { req.setRemoteAddr("192.0.2.11"); return req; })
                     .param("username", "admin").param("password", "wrong"))

@@ -24,7 +24,6 @@ public interface IPedidoDao extends JpaRepository<Pedido, Long> {
     List<Pedido> findByEstadoInAndPagadoFalseOrderByFechaCreacionAsc(List<EstadoPedido> estados);
     List<Pedido> findByNumeroMesaAndEstadoIn(Integer mesa, List<EstadoPedido> estados);
 
-    List<Pedido> findByPagadoTrue();
 
     List<Pedido> findByFechaCreacionGreaterThanEqualAndFechaCreacionLessThan(LocalDateTime desde, LocalDateTime hasta);
     List<Pedido> findByPagadoTrueAndFechaPagoGreaterThanEqualAndFechaPagoLessThan(LocalDateTime desde, LocalDateTime hasta);

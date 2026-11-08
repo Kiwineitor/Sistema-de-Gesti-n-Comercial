@@ -1,12 +1,9 @@
 package com.sistema.pedidosCori.controller;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -32,10 +29,8 @@ import com.sistema.pedidosCori.models.dto.NotificacionWsDTO;
 import com.sistema.pedidosCori.models.dto.PedidoRequestDTO;
 import com.sistema.pedidosCori.models.dto.PlatoEdicionRequest;
 import com.sistema.pedidosCori.models.dto.PresentacionRequestDTO;
-import com.sistema.pedidosCori.models.dto.ReporteDiarioDTO;
 import com.sistema.pedidosCori.models.dto.StockUpdateDTO;
 import com.sistema.pedidosCori.models.entity.AccionAuditoria;
-import com.sistema.pedidosCori.models.entity.DetallePedido;
 import com.sistema.pedidosCori.models.entity.EstadoPedido;
 import com.sistema.pedidosCori.models.entity.Modalidad;
 import com.sistema.pedidosCori.models.entity.Pedido;
@@ -53,7 +48,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class ApiController {
-    
+
     private final IPedidoService        pedidoService;
     private final IPedidoDao            pedidoDao;
     private final IDetallePedidoDao     detallePedidoDao;
@@ -65,17 +60,16 @@ public class ApiController {
     private final CategoriaService categoriaService;
     private final PlatoImagenService platoImagenService;
 
- 
     @GetMapping("/platos/todos")
     public ResponseEntity<List<Plato>> getTodosLosPlatos() {
         return ResponseEntity.ok(platoDao.findByArchivadoFalse());
     }
- 
+
     @GetMapping("/platos")
     public ResponseEntity<List<Plato>> getPlatos() {
         return ResponseEntity.ok(platoDao.findByDisponibleTrueAndArchivadoFalse());
     }
- 
+
     @PostMapping("/platos")
     public ResponseEntity<Plato> crearPlato(@RequestBody Plato plato) {
         plato.setCategoria(categoriaService.codigoValido(plato.getCategoria()));
@@ -88,7 +82,7 @@ public class ApiController {
         auditoria.registrar(AccionAuditoria.PLATO_CREADO, "Plato", guardado.getId(), () -> describirPlato(guardado));
         return ResponseEntity.ok(guardado);
     }
- 
+
     @PutMapping("/platos/{id}")
     public ResponseEntity<Plato> editarPlato(@PathVariable Long id, @RequestBody PlatoEdicionRequest d) {
         return platoDao.findById(id).filter(p -> !Boolean.TRUE.equals(p.getArchivado())).map(p -> {
@@ -124,7 +118,7 @@ public class ApiController {
             NotificacionWsDTO.builder().tipo("ACTUALIZACION_MENU").mensaje("Plato eliminado").build());
         return ResponseEntity.noContent().build();
     }
- 
+
  
         @GetMapping("/platos/{id}/presentaciones")
     public ResponseEntity<List<PresentacionPlato>> getPresentaciones(
@@ -134,21 +128,21 @@ public class ApiController {
         if (platoDao.findById(id).filter(p -> !Boolean.TRUE.equals(p.getArchivado())).isEmpty()) {
             throw new java.util.NoSuchElementException("Plato no encontrado: " + id);
         }
- 
+
         if (tipo != null) {
             Modalidad mod;
             try { mod = Modalidad.valueOf(tipo.toUpperCase()); }
             catch (IllegalArgumentException e) { throw new IllegalArgumentException("Modalidad no válida"); }
- 
+
             List<Modalidad> filtro = List.of(mod, Modalidad.AMBAS);
             return ResponseEntity.ok(
                 presentacionPlatoDao.findByPlatoIdAndDisponibleTrueAndModalidadIn(id, filtro)
             );
         }
- 
+
         return ResponseEntity.ok(presentacionPlatoDao.findByPlatoIdOrderByPrecioAsc(id));
     }
- 
+
     @PostMapping("/platos/{id}/presentaciones")
     public ResponseEntity<PresentacionPlato> crearPresentacion(
             @PathVariable Long id, @RequestBody PresentacionRequestDTO dto) {
@@ -169,7 +163,7 @@ public class ApiController {
             return ResponseEntity.ok(saved);
         }).orElseThrow(() -> new java.util.NoSuchElementException("Plato no encontrado: " + id));
     }
- 
+
     @PutMapping("/presentaciones/{id}")
     public ResponseEntity<PresentacionPlato> editarPresentacion(
             @PathVariable Long id, @RequestBody PresentacionRequestDTO dto) {
@@ -185,7 +179,7 @@ public class ApiController {
             return ResponseEntity.ok(guardada);
         }).orElseThrow(() -> new java.util.NoSuchElementException("Presentación no encontrada: " + id));
     }
- 
+
     @DeleteMapping("/presentaciones/{id}")
     public ResponseEntity<Void> eliminarPresentacion(@PathVariable Long id) {
         String descripcion = presentacionPlatoDao.findById(id).map(this::describirPresentacion).orElse(null);
@@ -196,13 +190,13 @@ public class ApiController {
             NotificacionWsDTO.builder().tipo("ACTUALIZACION_MENU").mensaje("Presentacion eliminada").build());
         return ResponseEntity.ok().build();
     }
- 
+
  
     @PostMapping("/pedidos")
     @Transactional
     public ResponseEntity<Pedido> crearPedido(@RequestBody PedidoRequestDTO dto) {
         Pedido pedido = pedidoService.crearPedido(dto);
- 
+
         Map<Long,Integer> descPlato=new HashMap<>(), descPres=new HashMap<>(), descSopa=new HashMap<>();
         pedido.getDetalles().forEach(d -> {
             if (d.getPresentacion() != null) descPres.merge(d.getPresentacion().getId(), d.getCantidad(), Integer::sum);
@@ -210,7 +204,7 @@ public class ApiController {
             if (d.getAcompananteSopa() != null) descSopa.merge(d.getAcompananteSopa().getId(), d.getCantidad(), Integer::sum);
         });
         aplicarDescuentoStock(descPlato, descPres, descSopa);
- 
+
         NotificacionWsDTO notif = NotificacionWsDTO.builder()
             .pedidoId(pedido.getId()).numeroMesa(pedido.getNumeroMesa())
             .nombreCliente(pedido.getNombreCliente()).estado(EstadoPedido.PENDIENTE)
@@ -219,16 +213,16 @@ public class ApiController {
         messagingTemplate.convertAndSend("/topic/mesero", notif);
         return ResponseEntity.ok(pedido);
     }
- 
+
  
     @PostMapping("/pedidos/{id}/detalles")
     @Transactional
     public ResponseEntity<Pedido> agregarDetalles(
             @PathVariable Long id,
             @RequestBody List<PedidoRequestDTO.DetalleRequestDTO> nuevosDetalles) {
- 
+
         Pedido saved = pedidoService.agregarDetalles(id, nuevosDetalles);
- 
+
         Map<Long,Integer> descPlato=new HashMap<>(), descPres=new HashMap<>(), descSopa=new HashMap<>();
         nuevosDetalles.forEach(d -> {
             if (d.getPresentacionId() != null) descPres.merge(d.getPresentacionId(), d.getCantidad(), Integer::sum);
@@ -236,7 +230,7 @@ public class ApiController {
             if (d.getAcompananteSopaId() != null) descSopa.merge(d.getAcompananteSopaId(), d.getCantidad(), Integer::sum);
         });
         aplicarDescuentoStock(descPlato, descPres, descSopa);
- 
+
         NotificacionWsDTO notif = NotificacionWsDTO.builder()
             .pedidoId(saved.getId()).numeroMesa(saved.getNumeroMesa())
             .nombreCliente(saved.getNombreCliente()).estado(saved.getEstado())
@@ -245,7 +239,7 @@ public class ApiController {
         messagingTemplate.convertAndSend("/topic/mesero", notif);
         return ResponseEntity.ok(saved);
     }
- 
+
  
     @PutMapping("/pedidos/{id}/estado")
     public ResponseEntity<Pedido> actualizarEstado(@PathVariable Long id, @RequestParam EstadoPedido estado,
@@ -271,7 +265,7 @@ public class ApiController {
         messagingTemplate.convertAndSend("/topic/cocina", n);
         return ResponseEntity.ok(pedido);
     }
- 
+
     @GetMapping("/pedidos/activos")
     public ResponseEntity<List<Pedido>> pedidosActivos() {
         return ResponseEntity.ok(pedidoService.obtenerPedidosActivos());
@@ -281,12 +275,12 @@ public class ApiController {
     public ResponseEntity<List<Pedido>> pedidosCocina() {
         return ResponseEntity.ok(pedidoService.obtenerPedidosCocina());
     }
- 
+
     @GetMapping("/pedidos/{id}")
     public ResponseEntity<Pedido> obtenerPedido(@PathVariable Long id) {
         return ResponseEntity.ok(pedidoService.obtenerPorId(id));
     }
- 
+
     @PutMapping("/pedidos/{id}/pagar")
     public ResponseEntity<Pedido> registrarPago(@PathVariable Long id, @RequestParam String metodoPago) {
         Pedido pedido = pedidoService.registrarPago(id, metodoPago);
@@ -295,7 +289,7 @@ public class ApiController {
                 .tipo("ACTUALIZACION_PAGO").mensaje("Pago recibido: " + labelPedido(pedido)).build());
         return ResponseEntity.ok(pedido);
     }
- 
+
  
     @PostMapping("/menu-diario")
     @Transactional
@@ -317,43 +311,7 @@ public class ApiController {
             publicados[0] + (publicados[0] == 1 ? " producto disponible" : " productos disponibles"));
         return ResponseEntity.ok(Collections.singletonMap("status", "Menu actualizado"));
     }
- 
- 
-    @GetMapping("/reportes/diarios")
-    public ResponseEntity<List<ReporteDiarioDTO>> getReportesDiarios() {
-        List<Pedido> pagados = pedidoService.obtenerTodosLosPagados();
-        Map<LocalDate,List<Pedido>> porFecha = pagados.stream()
-            .collect(Collectors.groupingBy(p -> p.getFechaCreacion().toLocalDate()));
-        List<ReporteDiarioDTO> reportes = new ArrayList<>();
-        porFecha.entrySet().stream().sorted(Map.Entry.<LocalDate,List<Pedido>>comparingByKey().reversed())
-            .forEach(entry -> {
-                List<Pedido> dias = entry.getValue();
-                double total = dias.stream().mapToDouble(p -> p.getDetalles().stream().mapToDouble(DetallePedido::getSubtotal).sum()).sum();
-                Map<String,int[]> itemMap = new HashMap<>();
-                Map<String,double[]> subtotalMap = new HashMap<>();
-                dias.forEach(p -> p.getDetalles().forEach(d -> {
-                    String key = d.getPresentacion() != null
-                        ? d.getPlato().getNombre() + " (" + d.getPresentacion().getNombre() + ")"
-                        : d.getPlato().getNombre();
-                    itemMap.computeIfAbsent(key, k -> new int[]{0})[0] += d.getCantidad();
-                    subtotalMap.computeIfAbsent(key, k -> new double[]{0})[0] += d.getSubtotal();
-                }));
-                List<ReporteDiarioDTO.ItemReporteDTO> items = new ArrayList<>();
-                itemMap.forEach((nombre, qtys) -> {
-                    double subtotal = subtotalMap.getOrDefault(nombre, new double[]{0})[0];
-                    ReporteDiarioDTO.ItemReporteDTO item = new ReporteDiarioDTO.ItemReporteDTO();
-                    item.setNombre(nombre); item.setCantidad(qtys[0]); item.setSubtotal(subtotal);
-                    items.add(item);
-                });
-                items.sort((a,b) -> b.getCantidad() - a.getCantidad());
-                ReporteDiarioDTO r = new ReporteDiarioDTO();
-                r.setFecha(entry.getKey()); r.setTotalVentas(total); r.setCantidadPedidos(dias.size());
-                r.setPedidosPagados((int) dias.stream().filter(Pedido::getPagado).count());
-                r.setItems(items); reportes.add(r);
-            });
-        return ResponseEntity.ok(reportes);
-    }
- 
+
  
     private String describirPlato(Plato p) {
         StringBuilder texto = new StringBuilder(String.valueOf(p.getNombre()));
@@ -386,9 +344,9 @@ public class ApiController {
             ? configuracionNegocioService.vista().getPuntoAtencionSingular() + " " + p.getNumeroMesa()
             : p.getNombreCliente();
     }
- 
+
     private void aplicarDescuentoStock(Map<Long,Integer> descPlato, Map<Long,Integer> descPres, Map<Long,Integer> descSopa) {
-        
+
         descPlato.forEach((pid, q) -> {
             platoDao.findById(pid).ifPresent(p -> {
                 if (p.getStockDisponible() != null) {
@@ -428,7 +386,7 @@ public class ApiController {
             });
         });
     }
-    
+
     @GetMapping("/mesas/ocupadas")
     public ResponseEntity<List<Integer>> getMesasOcupadas() {
         List<Integer> ocupadas = pedidoDao.findMesasOcupadas(

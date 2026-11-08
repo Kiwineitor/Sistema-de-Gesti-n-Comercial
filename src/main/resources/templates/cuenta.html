@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="|${pendientes.alguno() ? 'Primer ingreso' : 'Mi contraseña'} — ${negocio.nombreNegocio}|">Mi cuenta</title>
+    <th:block th:replace="~{fragments/head :: branding}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/cuenta.css}">
+    <script defer th:src="@{/js/cuenta.js}"></script>
+</head>
+<body class="login-page">
+    <main class="login-card cuenta-card">
+        <button type="button" class="tema-toggle" data-tema-alternar>Modo oscuro</button>
+        <div class="cuenta-cabecera">
+            <img th:src="${negocio.logoUrl}" th:alt="|Logo de ${negocio.nombreNegocio}|">
+            <h1 th:text="${pendientes.alguno() ? 'Primer ingreso' : 'Cambiar mi contraseña'}">Primer ingreso</h1>
+        </div>
+        <p class="cuenta-intro" th:if="${pendientes.alguno()}">
+            Hola <strong th:text="${sesionNombre}">usuario</strong>. Antes de empezar, completa estos pasos. Solo se piden una vez.
+        </p>
+        <p class="cuenta-intro" th:unless="${pendientes.alguno()}">
+            Elige una contraseña que solo tú conozcas. Las demás sesiones abiertas con tu cuenta se cerrarán.
+        </p>
+
+        <div class="msg message-error" role="alert" th:if="${error}" th:text="${error}">Error</div>
+        <div class="msg message-success" role="status" th:if="${ok}" th:text="${ok}">Listo</div>
+
+        <form th:action="@{/cuenta}" method="post" id="cuenta-form" novalidate>
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+            <section class="cuenta-seccion" th:if="${pedirPassword}" aria-labelledby="cuenta-paso-password">
+                <h2 id="cuenta-paso-password" th:text="${pendientes.password() ? '1. Crea tu contraseña personal' : 'Nueva contraseña'}">Contraseña</h2>
+                <p th:if="${pendientes.password()}">La contraseña con la que entraste es temporal. Cámbiala por una propia: nadie más, ni el administrador ni el proveedor del sistema, podrá verla.</p>
+
+                <label for="actual" th:text="${pendientes.password() ? 'Contraseña temporal (la que usaste para entrar)' : 'Contraseña actual'}">Contraseña actual</label>
+                <div class="password-wrap">
+                    <input class="field" id="actual" name="actual" type="password" autocomplete="current-password" required>
+                    <button type="button" class="password-toggle flat" data-password-toggle="actual" aria-pressed="false">Mostrar</button>
+                </div>
+
+                <label for="nueva">Nueva contraseña</label>
+                <div class="password-wrap">
+                    <input class="field" id="nueva" name="nueva" type="password" autocomplete="new-password" required
+                           th:attr="minlength=${passwordMinimo}" maxlength="72" aria-describedby="cuenta-reglas">
+                    <button type="button" class="password-toggle flat" data-password-toggle="nueva" aria-pressed="false">Mostrar</button>
+                </div>
+                <ul class="cuenta-reglas" id="cuenta-reglas">
+                    <li th:text="|Al menos ${passwordMinimo} caracteres.|">Al menos 8 caracteres.</li>
+                    <li>Combina letras y números.</li>
+                    <li>No uses tu nombre de usuario ni contraseñas comunes.</li>
+                </ul>
+
+                <label for="confirmacion">Repite la nueva contraseña</label>
+                <div class="password-wrap">
+                    <input class="field" id="confirmacion" name="confirmacion" type="password" autocomplete="new-password" required maxlength="72">
+                    <button type="button" class="password-toggle flat" data-password-toggle="confirmacion" aria-pressed="false">Mostrar</button>
+                </div>
+            </section>
+
+            <section class="cuenta-seccion" th:if="${pendientes.terminos()}" aria-labelledby="cuenta-paso-terminos">
+                <h2 id="cuenta-paso-terminos" th:text="${pendientes.password() ? '2. Términos y condiciones de uso' : 'Términos y condiciones de uso'}">Términos</h2>
+                <p>Lee los puntos principales. El texto completo está en <a class="cuenta-enlace" th:href="@{/terminos}" target="_blank" rel="noopener">Términos y condiciones</a>.</p>
+                <div class="cuenta-terminos-resumen" tabindex="0" aria-label="Resumen de los términos y condiciones">
+                    <ul>
+                        <li>El sistema se entrega instalado para uso exclusivo del negocio. El negocio lo administra y es el <strong>único responsable</strong> de los datos que registra y de quién tiene acceso.</li>
+                        <li>El proveedor <strong>no guarda contraseñas ni tiene acceso</strong> al sistema o a sus datos, salvo que el negocio lo autorice por escrito para un soporte puntual.</li>
+                        <li>Cada persona cuida su contraseña y no la comparte. Lo que se haga con una cuenta queda registrado a su nombre.</li>
+                        <li>El negocio debe hacer <strong>respaldos periódicos</strong> de la base de datos y cuidar el equipo donde está instalado.</li>
+                        <li>Los reportes son de control interno: el sistema <strong>no emite facturas</strong> ni reemplaza las obligaciones tributarias.</li>
+                    </ul>
+                </div>
+                <label class="cuenta-check">
+                    <input type="checkbox" name="aceptaTerminos" value="true" required th:checked="${aceptaTerminos}">
+                    <span th:text="|He leído y acepto los Términos y condiciones de uso (versión ${terminosVersion}).|">Acepto</span>
+                </label>
+            </section>
+
+            <button class="button-primary" type="submit" th:text="${pendientes.alguno() ? 'Guardar y continuar' : 'Cambiar contraseña'}">Guardar</button>
+        </form>
+
+        <div class="cuenta-pie">
+            <a th:unless="${pendientes.alguno()}" th:href="@{/}">‹ Volver</a>
+            <a th:if="${pendientes.alguno()}" th:href="@{/terminos}" target="_blank" rel="noopener">Ver términos completos</a>
+            <form th:action="@{/logout}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button type="submit" class="cuenta-salir flat">Cerrar sesión</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

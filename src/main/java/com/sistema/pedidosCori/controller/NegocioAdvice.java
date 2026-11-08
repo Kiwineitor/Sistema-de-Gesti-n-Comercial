@@ -9,7 +9,7 @@ import com.sistema.pedidosCori.service.ConfiguracionNegocioService;
 
 import lombok.RequiredArgsConstructor;
 
-@ControllerAdvice(assignableTypes = {PageController.class, AdminPageController.class})
+@ControllerAdvice(assignableTypes = {PageController.class, AdminPageController.class, CuentaController.class})
 @RequiredArgsConstructor
 public class NegocioAdvice {
     private final ConfiguracionNegocioService service;

@@ -220,7 +220,7 @@ class AdminGestionTests {
             mvc().perform(get("/api/admin/auditoria").with(quien)).andExpect(status().isForbidden());
             mvc().perform(get("/api/admin/resumen-hoy").with(quien)).andExpect(status().isForbidden());
             for (String ruta : List.of("/admin", "/admin/menu-hoy", "/admin/local", "/admin/usuarios",
-                    "/admin/actividad", "/admin/apariencia", "/menu", "/configuracion")) {
+                    "/admin/actividad", "/admin/apariencia", "/admin/reportes")) {
                 mvc().perform(get(ruta).with(quien)).andExpect(redirectedUrl("/?denegado"));
             }
         }
@@ -228,9 +228,7 @@ class AdminGestionTests {
     }
 
     @Test
-    void legacyAdminRoutesRedirectToNewPages() throws Exception {
-        mvc().perform(get("/menu").with(admin())).andExpect(redirectedUrl("/admin/menu-hoy"));
-        mvc().perform(get("/configuracion").with(admin())).andExpect(redirectedUrl("/admin/apariencia"));
+    void adminHomeRedirectsToPanel() throws Exception {
         mvc().perform(get("/").with(admin())).andExpect(redirectedUrl("/admin"));
     }
 
@@ -245,7 +243,7 @@ class AdminGestionTests {
             && username.equals(r.getUsuario()) && r.getDetalle().contains("Cuenta desactivada")));
         actualizarUsuario(admin(), id, "Inactivo", "MESERO", true, 200);
         mvc().perform(post("/login").with(csrf()).param("username", username).param("password", CLAVE))
-            .andExpect(redirectedUrl("/"));
+            .andExpect(redirectedUrl("/cuenta"));
     }
 
     @Test
@@ -255,8 +253,13 @@ class AdminGestionTests {
         MockMvc client = mvc();
         MockHttpSession sesion = (MockHttpSession) client.perform(post("/login").with(csrf())
                 .param("username", username).param("password", CLAVE))
-            .andExpect(redirectedUrl("/")).andReturn().getRequest().getSession(false);
+            .andExpect(redirectedUrl("/cuenta")).andReturn().getRequest().getSession(false);
         assertNotNull(sesion);
+        client.perform(get("/api/pedidos/activos").session(sesion))
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.codigo").value("CUENTA_PENDIENTE"));
+        client.perform(post("/cuenta").session(sesion).with(csrf()).param("actual", CLAVE)
+                .param("nueva", "MiClavePropia-77").param("confirmacion", "MiClavePropia-77").param("aceptaTerminos", "true"))
+            .andExpect(redirectedUrl("/"));
         assertNotNull(usuarioDao.findById(id).orElseThrow().getUltimoAcceso());
         assertTrue(hayAuditoria("LOGIN", null, username));
         client.perform(get("/api/pedidos/activos").session(sesion)).andExpect(status().isOk());
@@ -280,7 +283,7 @@ class AdminGestionTests {
         MockMvc client = mvc();
         MockHttpSession sesion = (MockHttpSession) client.perform(post("/login").with(csrf())
                 .param("username", username).param("password", CLAVE))
-            .andExpect(redirectedUrl("/")).andReturn().getRequest().getSession(false);
+            .andExpect(redirectedUrl("/cuenta")).andReturn().getRequest().getSession(false);
         actualizarUsuario(admin(), id, "Rol", "COCINA", true, 200);
         client.perform(get("/mesero").session(sesion)).andExpect(redirectedUrl("/login?expirado"));
     }

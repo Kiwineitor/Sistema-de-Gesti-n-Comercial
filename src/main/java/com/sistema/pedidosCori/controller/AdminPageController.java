@@ -32,10 +32,4 @@ public class AdminPageController {
 
     @GetMapping("/admin/apariencia")
     public String apariencia() { return "admin/apariencia"; }
-
-    @GetMapping("/menu")
-    public String menuAnterior() { return "redirect:/admin/menu-hoy"; }
-
-    @GetMapping("/configuracion")
-    public String configuracionAnterior() { return "redirect:/admin/apariencia"; }
 }

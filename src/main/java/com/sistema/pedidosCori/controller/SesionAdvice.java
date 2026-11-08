@@ -21,7 +21,7 @@ import com.sistema.pedidosCori.service.ConfiguracionNegocioService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
-@ControllerAdvice(assignableTypes = { PageController.class, AdminPageController.class })
+@ControllerAdvice(assignableTypes = { PageController.class, AdminPageController.class, CuentaController.class })
 @RequiredArgsConstructor
 public class SesionAdvice {
     private final ConfiguracionNegocioService negocioService;

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="|Términos y condiciones — ${negocio.nombreNegocio}|">Términos y condiciones</title>
+    <th:block th:replace="~{fragments/head :: branding}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/cuenta.css}">
+</head>
+<body class="terminos-page">
+<main class="terminos-doc">
+    <header>
+        <img th:src="${negocio.logoUrl}" alt="">
+        <div>
+            <h1>Términos y condiciones de uso</h1>
+            <p class="terminos-meta" th:text="|Versión ${terminosVersion} · Vigente desde el ${terminosVigencia}|">Versión 1.0</p>
+        </div>
+    </header>
+
+    <p class="terminos-aviso">
+        Estos términos regulan el uso del Sistema de Gestión Comercial instalado para
+        <strong th:text="${negocio.nombreNegocio}">el negocio</strong>. Cada persona los acepta una vez, al ingresar por primera vez.
+        Si existe un contrato firmado entre el negocio y el proveedor, ese contrato prevalece en lo que estos términos no regulen o contradigan.
+    </p>
+
+    <h2>1. Definiciones</h2>
+    <ul>
+        <li><strong>Proveedor:</strong> el equipo de desarrollo que construyó, instaló y entregó el sistema.</li>
+        <li><strong>Negocio o Cliente:</strong> la persona natural o jurídica que recibe el sistema, lo opera y es titular de la instalación.</li>
+        <li><strong>Usuario:</strong> toda persona con una cuenta en el sistema (administradores, personal de atención y de preparación).</li>
+        <li><strong>Datos:</strong> toda la información que se registra en el sistema: productos, precios, pedidos, cobros, fotos, cuentas de usuario y registro de actividad.</li>
+    </ul>
+
+    <h2>2. Objeto y licencia de uso</h2>
+    <p>El Proveedor otorga al Negocio una licencia de uso del sistema para la gestión interna de sus pedidos, ventas y personal. La licencia es para uso del propio Negocio; no incluye el derecho a revender, sublicenciar o distribuir el sistema a terceros, salvo acuerdo escrito con el Proveedor.</p>
+
+    <h2>3. Entrega y control exclusivo del sistema</h2>
+    <ol>
+        <li>El sistema se entrega instalado en la infraestructura que el Negocio elige y controla (computadora, servidor o nube propia).</li>
+        <li>Desde la entrega, el Negocio tiene el <strong>control exclusivo</strong> del sistema: administra las cuentas, las contraseñas, la configuración y los datos.</li>
+        <li>El Proveedor <strong>no conserva contraseñas, no tiene cuentas propias dentro del sistema y no tiene acceso remoto</strong> a la instalación ni a los datos.</li>
+        <li>Las contraseñas iniciales de entrega son temporales: el sistema obliga a cambiarlas en el primer ingreso, de modo que solo el Negocio conozca las definitivas.</li>
+    </ol>
+
+    <h2>4. Responsabilidad sobre los datos</h2>
+    <ol>
+        <li>El Negocio es el <strong>único titular y responsable</strong> de los datos que registra, de su veracidad, de su uso y de quién accede a ellos.</li>
+        <li>Si el Negocio registra datos personales de su personal o de sus clientes (por ejemplo, nombres), es responsable de hacerlo con un fin legítimo y de cumplir la normativa vigente aplicable en materia de protección de datos, laboral y tributaria.</li>
+        <li>El Proveedor no trata, no consulta, no comercializa ni comparte los datos del Negocio.</li>
+        <li>Si el Negocio solicita soporte que requiera revisar la instalación o los datos, deberá autorizarlo <strong>por escrito</strong>, indicando el alcance y el tiempo. El Proveedor guardará confidencialidad sobre lo que vea en ese soporte y no conservará copias.</li>
+    </ol>
+
+    <h2>5. Cuentas, contraseñas y acceso</h2>
+    <ol>
+        <li>Cada Usuario es responsable de su contraseña: debe ser personal, secreta y no compartirse.</li>
+        <li>Toda acción hecha con una cuenta queda registrada en el registro de actividad a nombre de esa cuenta y se atribuye al Negocio.</li>
+        <li>El administrador del Negocio crea, modifica, desactiva y elimina las cuentas de su personal, y debe desactivar de inmediato las de quienes dejen de trabajar en el Negocio.</li>
+        <li>Si el Negocio pierde el acceso de todos sus administradores, el acceso se recupera <strong>desde el servidor donde está instalado el sistema</strong>, con el procedimiento descrito en el manual de instalación. Solo puede hacerlo quien tenga control de ese servidor; el Proveedor puede orientar el procedimiento, pero no posee ningún acceso alternativo.</li>
+        <li>El sistema bloquea temporalmente una cuenta después de varios intentos fallidos de ingreso, para protegerla.</li>
+    </ol>
+
+    <h2>6. Infraestructura, seguridad y respaldos</h2>
+    <ol>
+        <li>El Negocio es responsable del equipo donde funciona el sistema, de su red, energía eléctrica, conexión a internet, sistema operativo y antivirus.</li>
+        <li>El Negocio debe realizar <strong>respaldos periódicos</strong> de la base de datos (se recomienda diario) y guardarlos fuera del equipo. El Proveedor no responde por pérdidas de datos causadas por falta de respaldos, fallas del equipo, borrados, virus o manipulación de terceros.</li>
+        <li>Si el sistema se publica en internet, el Negocio debe hacerlo mediante una conexión cifrada (HTTPS) siguiendo el manual de instalación.</li>
+        <li>Los cambios al código, a la base de datos o a la configuración hechos por el Negocio o por terceros no autorizados por el Proveedor dejan sin efecto la garantía sobre las partes afectadas.</li>
+    </ol>
+
+    <h2>7. Uso permitido</h2>
+    <p>Los Usuarios se comprometen a usar el sistema solo para las tareas del Negocio, de forma lícita, sin intentar acceder a funciones o datos para los que no tienen permiso, sin alterar registros con fines indebidos y guardando confidencialidad sobre la información del Negocio.</p>
+
+    <h2>8. Información contable y tributaria</h2>
+    <p>Los reportes del sistema son herramientas de <strong>control interno</strong>. El sistema <strong>no emite facturas ni documentos fiscales</strong> y no reemplaza los sistemas de facturación, libros ni declaraciones exigidos por la administración tributaria. El Negocio es responsable de cumplir sus obligaciones tributarias y de verificar las cifras antes de usarlas en decisiones o declaraciones.</p>
+
+    <h2>9. Soporte, garantía y actualizaciones</h2>
+    <ol>
+        <li>El soporte, la garantía y las actualizaciones se prestan según lo acordado entre el Negocio y el Proveedor. A falta de acuerdo, el Proveedor corregirá los defectos reproducibles atribuibles al sistema que se informen durante el periodo de garantía pactado.</li>
+        <li>El sistema se entrega en el estado en que funciona al momento de la entrega. El Proveedor no garantiza un funcionamiento ininterrumpido ni libre de errores, especialmente ante fallas de equipo, red o energía ajenas al sistema.</li>
+        <li>Antes de instalar una actualización, el Negocio debe hacer un respaldo.</li>
+    </ol>
+
+    <h2>10. Limitación de responsabilidad</h2>
+    <p>En la máxima medida permitida por la ley, el Proveedor no será responsable por daños indirectos, lucro cesante, pérdida de datos, pérdida de ventas, sanciones o decisiones tomadas a partir de la información del sistema. La responsabilidad total del Proveedor, por cualquier causa, se limita al monto efectivamente pagado por el Negocio por el sistema.</p>
+
+    <h2>11. Propiedad intelectual</h2>
+    <p>El código fuente, el diseño y la documentación del sistema pertenecen al Proveedor, salvo que un contrato escrito disponga otra cosa. Los Datos registrados pertenecen al Negocio.</p>
+
+    <h2>12. Cambios a estos términos</h2>
+    <p>Si estos términos cambian, se publicará una nueva versión y el sistema pedirá aceptarla de nuevo al ingresar. La aceptación de cada Usuario, con su fecha, queda registrada en el registro de actividad.</p>
+
+    <h2>13. Ley aplicable</h2>
+    <p>Estos términos se rigen por las leyes del Estado Plurinacional de Bolivia. Las controversias se procurarán resolver primero de forma directa y amistosa entre las partes.</p>
+
+    <div class="terminos-acciones">
+        <a class="btn button-primary" th:href="@{/}">Volver al sistema</a>
+        <button type="button" class="button-secondary" onclick="window.print()">Imprimir</button>
+    </div>
+</main>
+</body>
+</html>

@@ -28,6 +28,9 @@ public enum AccionAuditoria {
     USUARIO_DESACTIVADO("Usuario desactivado"),
     USUARIO_ELIMINADO("Usuario eliminado"),
     PASSWORD_RESTABLECIDA("Contraseña restablecida"),
+    PASSWORD_CAMBIADA("Contraseña cambiada por su titular"),
+    TERMINOS_ACEPTADOS("Términos y condiciones aceptados"),
+    ACCESO_RECUPERADO("Acceso recuperado desde el servidor"),
     LOGIN("Inicio de sesión"),
     LOGIN_FALLIDO("Intento de acceso fallido");
 

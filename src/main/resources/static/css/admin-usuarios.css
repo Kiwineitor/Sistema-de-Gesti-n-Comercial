@@ -113,3 +113,4 @@
   .usr-scroll { max-height: clamp(300px, calc(100dvh - 200px), 75dvh); }
   .usr-scroll .admin-table tbody { padding: var(--space-2); gap: var(--space-2); }
 }
+.usr-estado { display: flex; flex-wrap: wrap; gap: var(--space-1); }

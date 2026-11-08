@@ -1,5 +1,6 @@
 package com.sistema.pedidosCori.service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -52,11 +53,12 @@ public class UsuarioService {
         String username = username(r.username());
         String nombre = nombre(r.nombreCompleto());
         Rol rol = rol(r.rol());
-        String password = password(r.password());
+        String password = PoliticaPassword.validar(r.password(), username);
         if (usuarioDao.existsByUsername(username)) throw new IllegalStateException("Ese nombre de usuario ya existe");
         Usuario u = usuarioDao.save(Usuario.builder()
             .username(username).nombreCompleto(nombre).rol(rol)
-            .password(passwordEncoder.encode(password)).activo(true).build());
+            .password(passwordEncoder.encode(password)).activo(true)
+            .debeCambiarPassword(true).passwordActualizadaEn(LocalDateTime.now()).build());
         auditoria.registrar(AccionAuditoria.USUARIO_CREADO, "Usuario", u.getId(),
             () -> nombre + " (" + username + ") · Rol " + etiquetaRol(rol));
         return vista(u, UsuarioActual.nombre().orElse(null));
@@ -101,8 +103,10 @@ public class UsuarioService {
     @Transactional
     public void cambiarPassword(Long id, String nuevaPassword) {
         Usuario u = buscar(id);
-        String password = password(nuevaPassword);
+        String password = PoliticaPassword.validar(nuevaPassword, u.getUsername());
         u.setPassword(passwordEncoder.encode(password));
+        u.setDebeCambiarPassword(!esActual(u));
+        u.setPasswordActualizadaEn(LocalDateTime.now());
         usuarioDao.save(u);
         auditoria.registrar(AccionAuditoria.PASSWORD_RESTABLECIDA, "Usuario", u.getId(),
             () -> Objects.toString(u.getNombreCompleto(), "") + " (" + u.getUsername() + ")");
@@ -150,7 +154,7 @@ public class UsuarioService {
     private UsuarioVista vista(Usuario u, String actual) {
         return new UsuarioVista(u.getId(), u.getUsername(), u.getNombreCompleto(), u.getRol().name(),
             Boolean.TRUE.equals(u.getActivo()), u.getUltimoAcceso() == null ? null : u.getUltimoAcceso().toString(),
-            u.getUsername().equals(actual));
+            u.getUsername().equals(actual), CuentaService.pendientes(u).alguno());
     }
 
     private String etiquetaRol(Rol rol) {
@@ -186,11 +190,5 @@ public class UsuarioService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Rol inválido");
         }
-    }
-
-    private static String password(String valor) {
-        if (valor == null || valor.length() < 8 || valor.length() > 72)
-            throw new IllegalArgumentException("La contraseña debe tener entre 8 y 72 caracteres");
-        return valor;
     }
 }

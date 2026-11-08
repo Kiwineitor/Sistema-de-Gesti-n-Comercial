@@ -15,5 +15,4 @@ public interface IPedidoService {
     List<Pedido> obtenerPedidosCocina();
     List<Pedido> obtenerPedidosPorEstado(EstadoPedido estado);
     Pedido obtenerPorId(Long id);
-    List<Pedido> obtenerTodosLosPagados();
 }

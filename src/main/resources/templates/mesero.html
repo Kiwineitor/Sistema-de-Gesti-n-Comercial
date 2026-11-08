@@ -281,32 +281,6 @@
         .act-btn.entregar { margin-top: 10px; background: var(--action-accent); color: var(--action-accent-on); }
         .act-btn.entregar:hover:not(:disabled) { background: var(--action-accent-hover); color: var(--action-accent-on-hover); }
 
-        .rep-day-card { margin-bottom: 12px; overflow: hidden; background: var(--surface-card); border: 1px solid var(--border-main); border-radius: 14px; box-shadow: var(--edge-top), var(--elev-1); }
-        .rep-day-head { width: 100%; margin: 0; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 0; background: transparent; color: var(--text-main); text-align: left; }
-        .rep-day-head:hover { background: var(--row-hover); }
-        .rep-day-date { display: block; font-weight: 900; font-size: .95rem; color: var(--text-main); }
-        .rep-day-sub { display: block; font-size: .75rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
-        .rep-day-right { display: block; text-align: right; flex-shrink: 0; }
-        .rep-day-total { display: block; font-weight: 900; font-size: 1.1rem; color: var(--brand-accent-text); }
-        .rep-day-arr { display: block; font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
-        .rep-day-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-base) var(--ease-out); }
-        .rep-day-body.open { grid-template-rows: 1fr; }
-        .rep-day-inner { min-height: 0; overflow: hidden; }
-        .rep-day-list { padding: 0 16px 14px; border-top: 1px solid var(--border-main); }
-        .rep-empty { text-align: center; padding: 40px; color: var(--text-muted); }
-        .rep-empty-icon { font-size: 2.5rem; }
-        .rep-empty-title { font-weight: 800; margin-top: 10px; color: var(--text-main); }
-        .rep-nodet { font-size: .8rem; color: var(--text-muted); padding: 8px 0; }
-        .rep-item { display: flex; justify-content: space-between; align-items: center; margin: 0 -8px; padding: 8px; border-bottom: 1px solid var(--border-main); transition: background-color var(--dur-fast) ease; }
-        .rep-item:hover { background: var(--row-hover); }
-        .rep-item:last-child { border-bottom: 0; }
-        .rep-item-name { font-size: .83rem; font-weight: 700; color: var(--text-main); }
-        .rep-item-qty { font-size: .78rem; color: var(--text-muted); font-weight: 600; }
-        .rep-item-sub { font-size: .83rem; font-weight: 800; color: var(--brand-accent-text); }
-        .rep-stat-row { display: flex; gap: 10px; margin-bottom: 14px; }
-        .rep-stat { flex: 1; padding: 12px; text-align: center; background: var(--surface-card); border: 1px solid var(--border-main); border-radius: var(--radius-md); box-shadow: var(--edge-top), var(--elev-1); }
-        .rep-stat-val { font-size: 1.4rem; font-weight: 900; color: var(--brand-accent-text); }
-        .rep-stat-lbl { font-size: .7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 2px; }
 
         .tarea { position: fixed; top: 66px; left: 0; right: 0; z-index: 999; display: flex; flex-direction: column; gap: 6px; padding: 0 11px; pointer-events: none; }
         .toast { display: flex; align-items: center; gap: 8px; padding: 10px 13px; background: var(--surface-card); color: var(--text-main); border: 1.5px solid var(--border-main); border-left-width: 5px; border-radius: var(--radius-md); box-shadow: var(--edge-top), var(--shadow-overlay); pointer-events: auto; cursor: pointer; user-select: none; touch-action: pan-x; animation: ui-pop-in var(--dur-base) var(--ease-out); transition: transform var(--dur-base) ease, opacity var(--dur-base) ease; will-change: transform, opacity; }
@@ -399,10 +373,6 @@
                     <div class="tc-nm">Administración</div>
                     <div class="tc-sb">Menú, precios y configuración</div>
                 </div>
-                <span class="tc-ar" aria-hidden="true">›</span>
-            </button>
-            <button type="button" class="tc" th:if="${sesionRol == 'ADMIN'}" onclick="ReportesView.open()">
-                <div class="tc-inf"><div class="tc-nm">Reportes de venta</div></div>
                 <span class="tc-ar" aria-hidden="true">›</span>
             </button>
         </div>
@@ -506,17 +476,6 @@
         </div>
     </div>
 
-    <div class="screen" id="s-reportes" th:if="${sesionRol == 'ADMIN'}">
-        <div class="top-bar">
-            <button type="button" class="back-btn" onclick="Nav.go('s-setup')">‹ Volver</button>
-            <span class="tb-title">REPORTES DE VENTA</span>
-            <span class="clk" id="clk-4">--:--</span>
-        </div>
-        <div class="scroll-area" id="reportes-list">
-            <div class="muted-center">Cargando reportes...</div>
-        </div>
-    </div>
-
     <div class="backdrop" id="backdrop" onclick="CartView.close()"></div>
     <div class="drawer" id="drawer" role="dialog" aria-labelledby="drawer-title" tabindex="-1">
         <div class="sheet-grip" data-drag aria-hidden="true"><div class="dhandle"></div></div>
@@ -607,8 +566,8 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="/js/vendor/sockjs.min.js"></script>
+    <script src="/js/vendor/stomp.min.js"></script>
     <script src="/js/security.js" th:src="@{/js/security.js}"></script>
     <script>
         'use strict';
@@ -718,7 +677,6 @@
             getPedidosActivos: () => API._req('/api/pedidos/activos'),
             cobrarPedido: (id, met) => API._req(`/api/pedidos/${id}/pagar?metodoPago=${met}`, { method: 'PUT' }),
             entregarPedido: (id) => API._req(`/api/pedidos/${id}/estado?estado=ENTREGADO`, { method: 'PUT' }),
-            getReportes: () => API._req('/api/reportes/diarios'),
             agregarDetalles: (pedidoId, detalles) =>
                 API._req(`/api/pedidos/${pedidoId}/detalles`, { method: 'POST', body: JSON.stringify(detalles) })
         };
@@ -937,7 +895,7 @@
             start() { this._tick(); setInterval(() => this._tick(), 15000); },
             _tick() {
                 const t = new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false });
-                ['clk-0', 'clk-1', 'clk-2', 'clk-3', 'clk-4'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = t; });
+                ['clk-0', 'clk-1', 'clk-2', 'clk-3'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = t; });
             }
         };
 
@@ -1971,52 +1929,6 @@
                     if (btn) btn.disabled = false;
                 }
             },
-        };
-
-        const ReportesView = {
-            async open() {
-                Nav.go('s-reportes');
-                const list = document.getElementById('reportes-list');
-                list.innerHTML = `<div class="muted-center">Cargando reportes...</div>`;
-                try { this._render(await API.getReportes()); }
-                catch (e) {
-                    list.textContent = e.message;
-                    showNotice(e.message);
-                }
-            },
-            _render(dias) {
-                const list = document.getElementById('reportes-list');
-                if (!dias?.length) { list.innerHTML = `<div class="rep-empty"><div class="rep-empty-icon" aria-hidden="true">📊</div><div class="rep-empty-title">Sin ventas registradas</div></div>`; return; }
-                const tg = dias.reduce((s, d) => s + (d.totalVentas ?? 0), 0), tp = dias.reduce((s, d) => s + (d.cantidadPedidos ?? 0), 0);
-                list.innerHTML = `<div class="rep-stat-row">
-            <div class="rep-stat"><div class="rep-stat-val">${MONEDA_HTML} ${tg.toFixed(0)}</div><div class="rep-stat-lbl">Total Acumulado</div></div>
-            <div class="rep-stat"><div class="rep-stat-val">${tp}</div><div class="rep-stat-lbl">Pedidos Totales</div></div>
-            <div class="rep-stat"><div class="rep-stat-val">${dias.length}</div><div class="rep-stat-lbl">Días Activos</div></div>
-        </div><div id="rep-days-container"></div>`;
-                const container = document.getElementById('rep-days-container');
-                dias.forEach((dia, idx) => {
-                    const fecha = new Date(dia.fecha + 'T12:00:00');
-                    const fs = fecha.toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                    const ih = (dia.items ?? []).map(item => `<div class="rep-item"><div><div class="rep-item-name">${escapeHtml(item.nombre)}</div><div class="rep-item-qty">${item.cantidad} porciones</div></div><div class="rep-item-sub">${MONEDA_HTML} ${(item.subtotal ?? 0).toFixed(2)}</div></div>`).join('');
-                    const card = document.createElement('div'); card.className = 'rep-day-card';
-                    card.innerHTML = `<button type="button" class="rep-day-head flat" aria-controls="rep-body-${idx}" aria-expanded="false">
-                <span><span class="rep-day-date">${escapeHtml(fs.charAt(0).toUpperCase() + fs.slice(1))}</span><span class="rep-day-sub">${escapeHtml(dia.cantidadPedidos ?? 0)} pedidos · ${escapeHtml(dia.pedidosPagados ?? 0)} cobrados</span></span>
-                <span class="rep-day-right"><span class="rep-day-total">${MONEDA_HTML} ${(dia.totalVentas ?? 0).toFixed(2)}</span><span class="rep-day-arr" aria-hidden="true"></span></span>
-            </button>
-            <div class="rep-day-body" id="rep-body-${idx}"><div class="rep-day-inner"><div class="rep-day-list">${ih || '<div class="rep-nodet">Sin detalle</div>'}</div></div></div>`;
-                    const head = card.querySelector('.rep-day-head'), body = card.querySelector('.rep-day-body');
-                    this._setOpen(head, body, idx === 0);
-                    head.addEventListener('click', () => this._setOpen(head, body, head.getAttribute('aria-expanded') !== 'true'));
-                    container.appendChild(card);
-                });
-            },
-            _setOpen(head, body, open) {
-                head.setAttribute('aria-expanded', String(open));
-                body.classList.toggle('open', open);
-                body.inert = !open;
-                const arr = head.querySelector('.rep-day-arr');
-                if (arr) arr.textContent = open ? '▲ Ocultar detalle' : '▼ Ver detalle';
-            }
         };
 
         const WSManager = {

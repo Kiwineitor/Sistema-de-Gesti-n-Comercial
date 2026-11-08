@@ -46,4 +46,16 @@ public class Usuario {
 
     @Column(name = "ultimo_acceso")
     private LocalDateTime ultimoAcceso;
+
+    @Column(name = "debe_cambiar_password")
+    private Boolean debeCambiarPassword;
+
+    @Column(name = "password_actualizada_en")
+    private LocalDateTime passwordActualizadaEn;
+
+    @Column(name = "terminos_version", length = 20)
+    private String terminosVersion;
+
+    @Column(name = "terminos_aceptados_en")
+    private LocalDateTime terminosAceptadosEn;
 }

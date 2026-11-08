@@ -249,7 +249,10 @@
             celda('Persona', persona);
             celda('Usuario', crear('code', 'usr-username', u.username));
             celda('Rol', crear('span', claseRol(u.rol), etiquetaRol(u.rol)));
-            celda('Estado', crear('span', u.activo ? 'badge badge-ok' : 'badge badge-off', u.activo ? 'Activo' : 'Desactivado'));
+            const estado = crear('div', 'usr-estado');
+            estado.append(crear('span', u.activo ? 'badge badge-ok' : 'badge badge-off', u.activo ? 'Activo' : 'Desactivado'));
+            if (u.activo && u.primerIngresoPendiente) estado.append(crear('span', 'badge badge-warn', 'Primer ingreso pendiente'));
+            celda('Estado', estado);
             const acceso = ultimoAcceso(u.ultimoAcceso);
             const t = crear('span', null, acceso.texto);
             if (acceso.titulo) t.title = acceso.titulo;
@@ -305,15 +308,20 @@
         const vocales = 'aeiou';
         const digitos = '23456789';
         const n = new Uint32Array(8);
-        if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(n);
-        else for (let i = 0; i < n.length; i++) n[i] = Math.floor(Math.random() * 4294967296);
+        window.crypto.getRandomValues(n);
         let clave = '';
         for (let i = 0; i < 4; i++) clave += consonantes[n[i] % consonantes.length] + vocales[n[i + 4] % vocales.length];
         clave = clave.charAt(0).toUpperCase() + clave.slice(1);
         const extra = new Uint32Array(3);
-        if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(extra);
-        else for (let i = 0; i < 3; i++) extra[i] = Math.floor(Math.random() * 4294967296);
+        window.crypto.getRandomValues(extra);
         return `${clave}${digitos[extra[0] % 8]}${digitos[extra[1] % 8]}${digitos[extra[2] % 8]}`;
+    }
+
+    function problemaPassword(password, username) {
+        if (password.length < 8 || password.length > 72) return 'La contraseña debe tener entre 8 y 72 caracteres. Puedes usar el botón Generar.';
+        if (!/\p{L}/u.test(password) || !/\d/.test(password)) return 'La contraseña debe combinar letras y números. Puedes usar el botón Generar.';
+        if (username && username.length >= 3 && password.toLowerCase().includes(username.toLowerCase())) return 'La contraseña no debe contener el nombre de usuario.';
+        return null;
     }
 
     function mostrarError(form, campo, mensaje) {
@@ -493,8 +501,9 @@
                     mostrarError(form, 'username', 'Ese usuario ya existe. Elige otro.');
                     valido = false;
                 }
-                if (v.password.length < 8 || v.password.length > 72) {
-                    mostrarError(form, 'password', 'La contraseña debe tener entre 8 y 72 caracteres. Puedes usar el botón Generar.');
+                const problema = problemaPassword(v.password, v.username);
+                if (problema) {
+                    mostrarError(form, 'password', problema);
                     valido = false;
                 }
             }
@@ -528,7 +537,7 @@
                 if (nuevo) {
                     const creado = await pedir(API, { method: 'POST', body: { username: v.username, nombreCompleto: v.nombreCompleto, rol: v.rol, password: v.password } });
                     borrador.limpiar();
-                    mostrarCredenciales('Cuenta creada', `Entrégale estos datos a ${v.nombreCompleto} para que pueda entrar.`, (creado && creado.username) || v.username, v.password);
+                    mostrarCredenciales('Cuenta creada', `Entrégale estos datos a ${v.nombreCompleto}. Es una contraseña temporal: al entrar por primera vez deberá cambiarla por una propia.`, (creado && creado.username) || v.username, v.password);
                     aviso('Cuenta creada correctamente.', 'ok');
                 } else {
                     await pedir(`${API}/${encodeURIComponent(usuario.id)}`, { method: 'PUT', body: { nombreCompleto: v.nombreCompleto, rol: v.rol, activo: v.activo } });
@@ -553,7 +562,7 @@
         form.querySelector('h2').textContent = `Nueva contraseña para ${usuario.nombreCompleto}`;
         form.querySelector('[data-intro]').textContent = usuario.esActual
             ? 'Vas a cambiar tu propia contraseña. Úsala la próxima vez que entres.'
-            : 'Úsalo si la persona olvidó su contraseña. Si tiene una sesión abierta, se cerrará y tendrá que entrar con la nueva.';
+            : 'Úsalo si la persona olvidó su contraseña. Recibirá una contraseña temporal y, al entrar, el sistema le pedirá crear una propia. Si tiene una sesión abierta, se cerrará.';
         prepararPassword(form);
         let tocado = false;
         form.addEventListener('input', () => { tocado = true; mostrarError(form, 'password', ''); });
@@ -569,8 +578,9 @@
         form.addEventListener('submit', async event => {
             event.preventDefault();
             const password = form.elements.password.value;
-            if (password.length < 8 || password.length > 72) {
-                mostrarError(form, 'password', 'La contraseña debe tener entre 8 y 72 caracteres. Puedes usar el botón Generar.');
+            const problema = problemaPassword(password, usuario.username);
+            if (problema) {
+                mostrarError(form, 'password', problema);
                 form.elements.password.focus();
                 return;
             }
@@ -584,7 +594,7 @@
             guardar.disabled = true;
             try {
                 await pedir(`${API}/${encodeURIComponent(usuario.id)}/password`, { method: 'PUT', body: { password } });
-                mostrarCredenciales('Contraseña cambiada', `Entrégale estos datos a ${usuario.nombreCompleto}.`, usuario.username, password);
+                mostrarCredenciales('Contraseña cambiada', usuario.esActual ? 'Usa esta contraseña la próxima vez que entres.' : `Entrégale estos datos a ${usuario.nombreCompleto}. Es temporal: al entrar deberá cambiarla por una propia.`, usuario.username, password);
                 aviso('Contraseña cambiada.', 'ok');
                 await cargar();
             } catch (error) {

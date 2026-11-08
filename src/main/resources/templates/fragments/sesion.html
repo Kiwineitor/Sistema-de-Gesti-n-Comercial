@@ -25,6 +25,10 @@
                 <button type="button" data-tema="sistema" aria-pressed="false">Sistema</button>
             </div>
         </div>
+        <nav class="sm-vistas sm-cuenta" aria-label="Mi cuenta">
+            <a th:href="@{/cuenta}" th:attr="aria-current=${sesionRuta == '/cuenta' ? 'page' : null}">Cambiar mi contraseña</a>
+            <a th:href="@{/terminos}" target="_blank" rel="noopener">Términos y condiciones</a>
+        </nav>
         <form th:action="@{/logout}" method="post" class="sm-form">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
             <button type="submit" class="sm-salir">Cerrar sesión</button>

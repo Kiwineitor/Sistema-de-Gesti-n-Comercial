@@ -90,12 +90,12 @@ class ConfiguracionNegocioTests {
 
     @Test
     void adminOnlyApiAndPageAndLogoHeaders() throws Exception {
-        mvc().perform(get("/configuracion").with(user("mesero").roles("MESERO")))
+        mvc().perform(get("/admin/apariencia").with(user("mesero").roles("MESERO")))
             .andExpect(redirectedUrl("/?denegado"));
         mvc().perform(get("/api/admin/configuracion").with(user("mesero").roles("MESERO")))
             .andExpect(status().isForbidden());
-        mvc().perform(get("/configuracion").with(user("admin").roles("ADMIN")))
-            .andExpect(redirectedUrl("/admin/apariencia"));
+        mvc().perform(get("/admin/apariencia").with(user("admin").roles("ADMIN")))
+            .andExpect(status().isOk());
         mvc().perform(get("/api/admin/configuracion").with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.nombreNegocio").exists());
         mvc().perform(put("/api/admin/configuracion").with(user("mesero").roles("MESERO"))

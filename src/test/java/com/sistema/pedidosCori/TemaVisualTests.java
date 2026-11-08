@@ -82,7 +82,8 @@ class TemaVisualTests {
 
     private static List<Path> archivosDeVista() throws IOException {
         try (Stream<Path> rutas = Stream.concat(Files.walk(RECURSOS.resolve("templates")), Files.walk(RECURSOS.resolve("static")))) {
-            return rutas.filter(p -> p.toString().matches(".*\\.(html|js|css)$")).toList();
+            return rutas.filter(p -> p.toString().matches(".*\\.(html|js|css)$"))
+                .filter(p -> !p.toString().replace('\\', '/').contains("/js/vendor/")).toList();
         }
     }
 

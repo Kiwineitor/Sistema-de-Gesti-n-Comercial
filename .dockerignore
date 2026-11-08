@@ -9,3 +9,4 @@ mvnw.cmd
 .env
 docker-compose*.yml
 README.md
+docs/
